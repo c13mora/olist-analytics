@@ -102,3 +102,7 @@ cd dashboard && npm run sources && npm run dev  # Evidence local preview
 - Never commit files from `data/`, credentials, or `profiles.yml` secrets.
   Snowflake credentials come from environment variables only.
 - When a ROADMAP task is done, tick its checkbox in `docs/ROADMAP.md`.
+- Git: work on a branch per ROADMAP task or phase, never directly on main.
+  Don't commit or push unless I ask. When I ask, propose a commit message in
+  Conventional Commits style (feat:, fix:, docs:, chore:, test:, refactor:)
+  and keep commits small, one logical change each.

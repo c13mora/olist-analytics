@@ -42,12 +42,12 @@ olist-analytics/
 ```
 
 ## Phase 0 — Setup (1 week)
-- [ ] Create GitHub repo, `.gitignore`, MIT license, README stub
-- [ ] Initialize uv project; add dbt-duckdb, dbt-snowflake, dlt, sqlfluff, pre-commit
+- [x] Create GitHub repo, `.gitignore`, MIT license, README stub
+- [x] Initialize uv project; add dbt-duckdb, dbt-snowflake, dlt, sqlfluff, pre-commit
 - [ ] Download Olist CSVs from Kaggle into `data/raw/` (document steps in README)
-- [ ] `dbt init`, configure `dev` target on DuckDB, `dbt debug` passes
-- [ ] SQLFluff config + pre-commit hooks
-- [ ] Skeleton `ci.yml` that runs lint
+- [x] `dbt init`, configure `dev` target on DuckDB, `dbt debug` passes
+- [x] SQLFluff config + pre-commit hooks
+- [x] Skeleton `ci.yml` that runs lint
 
 ## Phase 1 — Replay loader (1–2 weeks)
 - [ ] `replay.py --reset`: load reference tables (sellers, products, categories, geolocation)

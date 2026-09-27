@@ -1,0 +1,10 @@
+packages:
+  - package: dbt-labs/dbt_utils
+    version: [">=1.0.0"]
+
+  # TODO: switch to Metaplane fork once hub name is confirmed (see CLAUDE.md)
+  - package: calogica/dbt_expectations
+    version: [">=0.10.0"]
+
+  - package: dbt-labs/dbt_project_evaluator
+    version: [">=0.8.0"]
