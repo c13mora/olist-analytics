@@ -106,3 +106,8 @@ cd dashboard && npm run sources && npm run dev  # Evidence local preview
   Don't commit or push unless I ask. When I ask, propose a commit message in
   Conventional Commits style (feat:, fix:, docs:, chore:, test:, refactor:)
   and keep commits small, one logical change each.
+
+## Python environment
+- Always run Python tools through uv: `uv run <command>` (e.g. `uv run dbt build`, `uv run python ingestion/replay.py`, `uv run sqlfluff lint`).
+- Never activate the venv manually and never use `pip install`.
+- To add a dependency, use `uv add <package>` (or `uv add --dev <package>` for dev tools), then commit both `pyproject.toml` and `uv.lock`.
