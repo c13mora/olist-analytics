@@ -51,7 +51,7 @@ olist-analytics/
 
 ## Phase 1 — Replay loader (1–2 weeks)
 - [x] `replay.py --reset`: load reference tables (sellers, products, categories, geolocation)
-- [ ] `replay.py --days N`: load new orders, items, payments, reviews up to the simulated date
+- [x] `replay.py --days N`: load new orders, items, payments, reviews up to the simulated date
 - [ ] Status updates on existing orders as timestamps pass the simulated date
 - [ ] Idempotency check: re-running a day creates no duplicates
 - [ ] Decision record: why replay, and how status is derived
