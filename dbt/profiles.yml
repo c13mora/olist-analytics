@@ -3,7 +3,8 @@ olist:
   outputs:
     dev:
       type: duckdb
-      path: "olist.duckdb"
+      # Same file the replay loader writes to. Relative to dbt/, where dbt runs.
+      path: "../data/olist.duckdb"
       schema: main
       threads: 4
 
