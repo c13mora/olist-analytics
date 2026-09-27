@@ -11,6 +11,9 @@ jobs:
     name: Lint SQL
     runs-on: ubuntu-latest
 
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,6 +24,9 @@ jobs:
 
       - name: Install dependencies
         run: uv sync
+
+      - name: Install dbt packages
+        run: cd dbt && uv run dbt deps
 
       - name: Lint SQL with SQLFluff
         run: uv run sqlfluff lint dbt/models --dialect duckdb
