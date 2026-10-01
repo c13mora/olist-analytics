@@ -53,8 +53,8 @@ olist-analytics/
 - [x] `replay.py --reset`: load reference tables (sellers, products, categories, geolocation)
 - [x] `replay.py --days N`: load new orders, items, payments, reviews up to the simulated date
 - [x] Status updates on existing orders as timestamps pass the simulated date
-- [ ] Idempotency check: re-running a day creates no duplicates
-- [ ] Decision record: why replay, and how status is derived
+- [x] Idempotency check: re-running a day creates no duplicates
+- [x] Decision record: why replay, and how status is derived
 
 ## Phase 2 — Sources and staging (1–2 weeks)
 - [ ] `_olist__sources.yml` with descriptions and freshness rules
