@@ -33,8 +33,7 @@ data/raw/
 Alternatively, use the Kaggle CLI (requires `~/.kaggle/kaggle.json` with your API token):
 
 ```bash
-pip install kaggle
-kaggle datasets download olistbr/brazilian-ecommerce -p data/raw/ --unzip
+uvx kaggle datasets download olistbr/brazilian-ecommerce -p data/raw/ --unzip
 ```
 
 > `data/` is gitignored — the CSVs are never committed.
@@ -50,11 +49,23 @@ uv run dbt debug                 # verify the DuckDB connection
 
 ### 4. Run the pipeline
 
+From the repo root:
+
 ```bash
-uv run python ingestion/replay.py --reset   # load reference data, reset simulation
-uv run python ingestion/replay.py --days 1  # advance simulation by N days
-cd dbt && uv run dbt build --target dev     # build + test all models on DuckDB
-cd dbt && uv run dbt snapshot               # capture SCD2 history
+uv run python ingestion/replay.py --reset   # load reference data + 2016 orders, restart at 2016-12-31
+uv run python ingestion/replay.py --days 1  # load what happened in the next N days
+cd dbt
+uv run dbt build --target dev               # build + test all models on DuckDB
+uv run dbt snapshot                         # capture SCD2 history
+```
+
+The loader and dbt share one DuckDB file, `data/olist.duckdb` (gitignored).
+Raw tables land in its `raw` schema.
+
+To verify that loads are idempotent, replay the same day twice and compare:
+
+```bash
+uv run python ingestion/check_idempotency.py   # advances one day; exits 1 if raw changed
 ```
 
 ## Architecture

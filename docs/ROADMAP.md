@@ -44,17 +44,17 @@ olist-analytics/
 ## Phase 0 — Setup (1 week)
 - [x] Create GitHub repo, `.gitignore`, MIT license, README stub
 - [x] Initialize uv project; add dbt-duckdb, dbt-snowflake, dlt, sqlfluff, pre-commit
-- [ ] Download Olist CSVs from Kaggle into `data/raw/` (document steps in README)
+- [x] Download Olist CSVs from Kaggle into `data/raw/` (document steps in README)
 - [x] `dbt init`, configure `dev` target on DuckDB, `dbt debug` passes
 - [x] SQLFluff config + pre-commit hooks
 - [x] Skeleton `ci.yml` that runs lint
 
 ## Phase 1 — Replay loader (1–2 weeks)
-- [ ] `replay.py --reset`: load reference tables (sellers, products, categories, geolocation)
-- [ ] `replay.py --days N`: load new orders, items, payments, reviews up to the simulated date
-- [ ] Status updates on existing orders as timestamps pass the simulated date
-- [ ] Idempotency check: re-running a day creates no duplicates
-- [ ] Decision record: why replay, and how status is derived
+- [x] `replay.py --reset`: load reference tables (sellers, products, categories, geolocation)
+- [x] `replay.py --days N`: load new orders, items, payments, reviews up to the simulated date
+- [x] Status updates on existing orders as timestamps pass the simulated date
+- [x] Idempotency check: re-running a day creates no duplicates
+- [x] Decision record: why replay, and how status is derived
 
 ## Phase 2 — Sources and staging (1–2 weeks)
 - [ ] `_olist__sources.yml` with descriptions and freshness rules
