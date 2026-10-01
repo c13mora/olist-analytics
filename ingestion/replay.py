@@ -236,14 +236,17 @@ def make_pipeline() -> dlt.Pipeline:
     )
 
 
-def run_pipeline(resources: list[Any], table_names: list[str]) -> None:
+def run_pipeline(resources: list[Any], table_names: list[str]) -> dict[str, int]:
+    """Load the resources and return the number of rows loaded per table."""
     pipeline = make_pipeline()
     load_info = pipeline.run(resources)
     load_info.raise_on_failed_jobs()
 
-    row_counts = pipeline.last_trace.last_normalize_info.row_counts
-    for table_name in table_names:
-        print(f"  {DATASET_NAME}.{table_name}: {row_counts.get(table_name, 0):,} rows")
+    normalized = pipeline.last_trace.last_normalize_info.row_counts
+    row_counts = {table_name: normalized.get(table_name, 0) for table_name in table_names}
+    for table_name, rows in row_counts.items():
+        print(f"  {DATASET_NAME}.{table_name}: {rows:,} rows")
+    return row_counts
 
 
 def read_state() -> date:
@@ -277,7 +280,7 @@ def reset() -> None:
     write_state(START_DATE)
 
 
-def advance(days: int) -> None:
+def advance(days: int) -> dict[str, int]:
     """Load everything that happened in the source system over the next N days."""
     current_date = read_state()
     new_date = current_date + timedelta(days=days)
@@ -286,10 +289,11 @@ def advance(days: int) -> None:
     resources = transactional_resources(con, end_of(current_date), end_of(new_date))
 
     print(f"Advancing simulation {current_date.isoformat()} -> {new_date.isoformat()}")
-    run_pipeline(resources, list(TRANSACTIONAL_QUERIES))
+    row_counts = run_pipeline(resources, list(TRANSACTIONAL_QUERIES))
     # State is saved only after a successful load. If the load fails, the next
     # run replays the same window, which the merge keys make safe.
     write_state(new_date)
+    return row_counts
 
 
 def positive_int(value: str) -> int:

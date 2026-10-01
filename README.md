@@ -62,6 +62,12 @@ uv run dbt snapshot                         # capture SCD2 history
 The loader and dbt share one DuckDB file, `data/olist.duckdb` (gitignored).
 Raw tables land in its `raw` schema.
 
+To verify that loads are idempotent, replay the same day twice and compare:
+
+```bash
+uv run python ingestion/check_idempotency.py   # advances one day; exits 1 if raw changed
+```
+
 ## Architecture
 
 ```
