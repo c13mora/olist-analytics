@@ -62,29 +62,76 @@ PRIMARY_KEYS = {
     "order_reviews": ["review_id", "order_id"],
 }
 
-# Each query returns the rows that become visible in the source system during
-# the window [$window_start, $window_end).
-PLACED_IN_WINDOW = """
-    o.order_purchase_timestamp::timestamp >= $window_start
-    and o.order_purchase_timestamp::timestamp < $window_end
-"""
+
+def in_window(expression: str) -> str:
+    return f"({expression} >= $window_start and {expression} < $window_end)"
+
+
+# Each query returns the rows that are new or changed in the source system
+# during the window [$window_start, $window_end).
+PLACED_IN_WINDOW = in_window("o.order_purchase_timestamp::timestamp")
 
 TRANSACTIONAL_QUERIES = {
-    # At purchase time an order is only 'created': approval, carrier pickup and
-    # delivery have not happened yet, so those timestamps must not leak in.
-    # The estimated delivery date is promised at checkout, so it is kept.
+    # The CSV only holds each order's final status, so the replay rebuilds its
+    # history from the milestone timestamps: an order is (re)loaded whenever a
+    # milestone falls in the window, showing its status as of the window end.
+    # Milestones that have not happened yet are hidden so nothing leaks from
+    # the future. The estimated delivery date is promised at checkout, so it
+    # is always visible.
     "orders": f"""
+        with orders_typed as (
+            select
+                *,
+                order_status as final_status,
+                order_purchase_timestamp::timestamp as purchased_at,
+                order_approved_at::timestamp as approved_at,
+                order_delivered_carrier_date::timestamp as shipped_at,
+                order_delivered_customer_date::timestamp as delivered_at,
+                -- Canceled and unavailable orders carry no timestamp for when
+                -- that happened. They take their final status at their last
+                -- known milestone: the replay never invents timestamps.
+                greatest(
+                    order_purchase_timestamp::timestamp,
+                    order_approved_at::timestamp,
+                    order_delivered_carrier_date::timestamp,
+                    order_delivered_customer_date::timestamp
+                ) as last_milestone_at
+            from orders
+        )
+
         select
-            o.order_id,
-            o.customer_id,
-            'created' as order_status,
-            o.order_purchase_timestamp,
-            null::varchar as order_approved_at,
-            null::varchar as order_delivered_carrier_date,
-            null::varchar as order_delivered_customer_date,
-            o.order_estimated_delivery_date
-        from orders as o
-        where {PLACED_IN_WINDOW}
+            order_id,
+            customer_id,
+            -- Status is the furthest milestone reached, checked from last to
+            -- first. Source timestamps are sometimes out of order (e.g. 1,359
+            -- orders handed to the carrier before approval), and this way the
+            -- status still never moves backwards.
+            case
+                when final_status in ('canceled', 'unavailable')
+                    and last_milestone_at < $window_end then final_status
+                when delivered_at < $window_end then 'delivered'
+                when shipped_at < $window_end then 'shipped'
+                -- Orders that end as 'invoiced' or 'processing' were approved
+                -- but never shipped: they hold that status from approval on.
+                when final_status in ('invoiced', 'processing')
+                    and approved_at < $window_end then final_status
+                when approved_at < $window_end then 'approved'
+                else 'created'
+            end as order_status,
+            order_purchase_timestamp,
+            case when approved_at < $window_end then order_approved_at end as order_approved_at,
+            case when shipped_at < $window_end then order_delivered_carrier_date end as order_delivered_carrier_date,
+            case when delivered_at < $window_end then order_delivered_customer_date end as order_delivered_customer_date,
+            order_estimated_delivery_date
+        from orders_typed
+        where
+            purchased_at < $window_end
+            and (
+                {in_window("purchased_at")}
+                or {in_window("approved_at")}
+                or {in_window("shipped_at")}
+                or {in_window("delivered_at")}
+            )
     """,
     "customers": f"""
         select c.*
@@ -108,18 +155,11 @@ TRANSACTIONAL_QUERIES = {
     # answered before their order's purchase time (a source data issue, left
     # for staging to flag); they arrive with the order instead, so a review
     # never shows up before the order it belongs to.
-    "order_reviews": """
+    "order_reviews": f"""
         select r.*
         from order_reviews as r
         inner join orders as o on r.order_id = o.order_id
-        where greatest(
-                r.review_answer_timestamp::timestamp,
-                o.order_purchase_timestamp::timestamp
-            ) >= $window_start
-            and greatest(
-                r.review_answer_timestamp::timestamp,
-                o.order_purchase_timestamp::timestamp
-            ) < $window_end
+        where {in_window("greatest(r.review_answer_timestamp::timestamp, o.order_purchase_timestamp::timestamp)")}
     """,
 }
 
