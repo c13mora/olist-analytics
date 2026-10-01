@@ -6,6 +6,7 @@ max_line_length = 120
 [sqlfluff:templater:dbt]
 project_dir = ./dbt
 profiles_dir = ./dbt
+target = lint
 
 [sqlfluff:indentation]
 tab_space_size = 4

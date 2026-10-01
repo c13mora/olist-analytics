@@ -8,10 +8,14 @@ repos:
       - id: check-added-large-files
         args: ["--maxkb=500"]
 
-  - repo: https://github.com/sqlfluff/sqlfluff
-    rev: 4.3.0
+  # SQLFluff runs from the project's uv environment, so the hook uses the same
+  # locked sqlfluff, dbt templater and dbt versions as CI. It lints the same
+  # path as CI (dbt/models); macros are mostly Jinja and are not linted.
+  - repo: local
     hooks:
       - id: sqlfluff-lint
-        additional_dependencies:
-          - dbt-core
-          - dbt-duckdb
+        name: sqlfluff-lint
+        entry: uv run sqlfluff lint
+        language: system
+        types: [sql]
+        files: ^dbt/models/
