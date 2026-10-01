@@ -1,0 +1,187 @@
+sources:
+  - name: olist
+    description: >
+      Brazilian e-commerce data from Olist, replayed in daily batches by
+      ingestion/replay.py (see docs/decisions/001-replay-loader.md). Each table
+      reflects the source as of the end of the simulated date. All columns land
+      as text; staging casts them. dlt adds two columns to every table:
+      `_dlt_load_id` (the load that last wrote the row, as Unix epoch seconds)
+      and `_dlt_id` (a unique row id).
+    schema: raw
+    config:
+      # Freshness measures when the loader last delivered data, not business
+      # time: in the replay, purchase dates are years old even right after a
+      # load. See macros/dlt_loaded_at.sql.
+      # loaded_at_query rather than loaded_at_field: dbt renders
+      # loaded_at_field while parsing YAML, before project macros exist, so
+      # the cross-warehouse macro would be undefined there.
+      loaded_at_query: "select max({{ dlt_loaded_at() }}) from {{ this }}"
+      freshness:
+        warn_after: {count: 24, period: hour}
+        error_after: {count: 48, period: hour}
+
+    tables:
+      # Reference data: loaded once at reset, so freshness does not apply.
+      - name: sellers
+        description: Sellers on the marketplace. One row per seller. Loaded once at reset.
+        config:
+          freshness: null
+        columns:
+          - name: seller_id
+            description: "{{ doc('olist__seller_id') }}"
+          - name: seller_zip_code_prefix
+            description: "{{ doc('olist__zip_code_prefix') }}"
+          - name: seller_city
+            description: "{{ doc('olist__city') }}"
+          - name: seller_state
+            description: "{{ doc('olist__state') }}"
+
+      - name: products
+        description: Product catalog. One row per product. Loaded once at reset.
+        config:
+          freshness: null
+        columns:
+          - name: product_id
+            description: "{{ doc('olist__product_id') }}"
+          - name: product_category_name
+            description: "{{ doc('olist__product_category_name') }}"
+          - name: product_name_lenght
+            description: "{{ doc('olist__product_name_lenght') }}"
+          - name: product_description_lenght
+            description: "{{ doc('olist__product_description_lenght') }}"
+          - name: product_photos_qty
+            description: "{{ doc('olist__product_photos_qty') }}"
+          - name: product_weight_g
+            description: "{{ doc('olist__product_weight_g') }}"
+          - name: product_length_cm
+            description: "{{ doc('olist__product_length_cm') }}"
+          - name: product_height_cm
+            description: "{{ doc('olist__product_height_cm') }}"
+          - name: product_width_cm
+            description: "{{ doc('olist__product_width_cm') }}"
+
+      - name: product_category_name_translation
+        description: >
+          Portuguese to English translation of product categories. One row per
+          category. Loaded once at reset.
+        config:
+          freshness: null
+        columns:
+          - name: product_category_name
+            description: "{{ doc('olist__product_category_name') }}"
+          - name: product_category_name_english
+            description: "{{ doc('olist__product_category_name_english') }}"
+
+      - name: geolocation
+        description: >
+          Latitude and longitude points per zip code prefix. Not unique: 19,015
+          prefixes have about 1M points between them, and 261,831 rows are
+          exact duplicates. Loaded once at reset.
+        config:
+          freshness: null
+        columns:
+          - name: geolocation_zip_code_prefix
+            description: "{{ doc('olist__zip_code_prefix') }}"
+          - name: geolocation_lat
+            description: "{{ doc('olist__geolocation_lat') }}"
+          - name: geolocation_lng
+            description: "{{ doc('olist__geolocation_lng') }}"
+          - name: geolocation_city
+            description: "{{ doc('olist__city') }}"
+          - name: geolocation_state
+            description: "{{ doc('olist__state') }}"
+
+      # Transactional data: arrives daily, so it inherits the source freshness.
+      - name: orders
+        description: >
+          Orders. One row per order, re-loaded whenever its status changes.
+          Arrives when the order is placed.
+        columns:
+          - name: order_id
+            description: "{{ doc('olist__order_id') }}"
+          - name: customer_id
+            description: "{{ doc('olist__customer_id') }}"
+          - name: order_status
+            description: "{{ doc('olist__order_status') }}"
+          - name: order_purchase_timestamp
+            description: "{{ doc('olist__order_purchase_timestamp') }}"
+          - name: order_approved_at
+            description: "{{ doc('olist__order_approved_at') }}"
+          - name: order_delivered_carrier_date
+            description: "{{ doc('olist__order_delivered_carrier_date') }}"
+          - name: order_delivered_customer_date
+            description: "{{ doc('olist__order_delivered_customer_date') }}"
+          - name: order_estimated_delivery_date
+            description: "{{ doc('olist__order_estimated_delivery_date') }}"
+
+      - name: customers
+        description: >
+          Customer details per order. One row per `customer_id`, which is one
+          per order. Arrives with its order.
+        columns:
+          - name: customer_id
+            description: "{{ doc('olist__customer_id') }}"
+          - name: customer_unique_id
+            description: "{{ doc('olist__customer_unique_id') }}"
+          - name: customer_zip_code_prefix
+            description: "{{ doc('olist__zip_code_prefix') }}"
+          - name: customer_city
+            description: "{{ doc('olist__city') }}"
+          - name: customer_state
+            description: "{{ doc('olist__state') }}"
+
+      - name: order_items
+        description: >
+          Items within an order. One row per (`order_id`, `order_item_id`).
+          Arrives with its order.
+        columns:
+          - name: order_id
+            description: "{{ doc('olist__order_id') }}"
+          - name: order_item_id
+            description: "{{ doc('olist__order_item_id') }}"
+          - name: product_id
+            description: "{{ doc('olist__product_id') }}"
+          - name: seller_id
+            description: "{{ doc('olist__seller_id') }}"
+          - name: shipping_limit_date
+            description: "{{ doc('olist__shipping_limit_date') }}"
+          - name: price
+            description: "{{ doc('olist__price') }}"
+          - name: freight_value
+            description: "{{ doc('olist__freight_value') }}"
+
+      - name: order_payments
+        description: >
+          Payments for an order. One row per (`order_id`, `payment_sequential`).
+          Arrives with its order.
+        columns:
+          - name: order_id
+            description: "{{ doc('olist__order_id') }}"
+          - name: payment_sequential
+            description: "{{ doc('olist__payment_sequential') }}"
+          - name: payment_type
+            description: "{{ doc('olist__payment_type') }}"
+          - name: payment_installments
+            description: "{{ doc('olist__payment_installments') }}"
+          - name: payment_value
+            description: "{{ doc('olist__payment_value') }}"
+
+      - name: order_reviews
+        description: >
+          Customer satisfaction reviews. One row per (`review_id`, `order_id`).
+          Arrives when the customer answers the survey.
+        columns:
+          - name: review_id
+            description: "{{ doc('olist__review_id') }}"
+          - name: order_id
+            description: "{{ doc('olist__order_id') }}"
+          - name: review_score
+            description: "{{ doc('olist__review_score') }}"
+          - name: review_comment_title
+            description: "{{ doc('olist__review_comment_title') }}"
+          - name: review_comment_message
+            description: "{{ doc('olist__review_comment_message') }}"
+          - name: review_creation_date
+            description: "{{ doc('olist__review_creation_date') }}"
+          - name: review_answer_timestamp
+            description: "{{ doc('olist__review_answer_timestamp') }}"
