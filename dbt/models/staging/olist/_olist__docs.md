@@ -175,3 +175,9 @@ Latitude of a point within the zip code prefix.
 {% docs olist__geolocation_lng %}
 Longitude of a point within the zip code prefix.
 {% enddocs %}
+
+{% docs olist__loaded_at %}
+When the loader last wrote this row (UTC), derived from dlt's `_dlt_load_id`.
+Updated whenever the row changes in the source, e.g. on an order status
+change, so it can drive incremental models.
+{% enddocs %}
