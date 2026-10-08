@@ -102,6 +102,12 @@ cd dashboard && npm run sources && npm run dev  # Evidence local preview
 - Never commit files from `data/`, credentials, or `profiles.yml` secrets.
   Snowflake credentials come from environment variables only.
 - When a ROADMAP task is done, tick its checkbox in `docs/ROADMAP.md`.
+- When the last task of a phase is done, write that phase's decision record
+  (`docs/decisions/NNN-title.md`, same structure as 001 and 002: context,
+  decisions with alternatives considered, consequences, verification) before
+  proposing the phase's pull request, so the PR carries its own reasoning.
+  Skip decisions a record from earlier in the phase already covers, and link to
+  that record instead.
 - Git: work on a branch per ROADMAP task or phase, never directly on main.
   Don't commit or push unless I ask. When I ask, propose a commit message in
   Conventional Commits style (feat:, fix:, docs:, chore:, test:, refactor:)
