@@ -1,3 +1,9 @@
+# The 26 Brazilian states plus the Federal District (DF), defined once and
+# reused below through the YAML alias *brazilian_states.
+x-brazilian-states: &brazilian_states
+  [AC, AL, AM, AP, BA, CE, DF, ES, GO, MA, MG, MS, MT, PA,
+   PB, PE, PI, PR, RJ, RN, RO, RR, RS, SC, SE, SP, TO]
+
 models:
   - name: stg_olist__orders
     description: >
@@ -6,10 +12,20 @@ models:
     columns:
       - name: order_id
         description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - unique
+          - not_null
       - name: customer_id
         description: "{{ doc('olist__customer_id') }}"
+        data_tests:
+          - not_null
       - name: order_status
         description: "{{ doc('olist__order_status') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [created, approved, invoiced, processing, shipped, delivered, canceled, unavailable]
       - name: purchased_at
         description: "{{ doc('olist__order_purchase_timestamp') }}"
       - name: approved_at
@@ -28,14 +44,24 @@ models:
     columns:
       - name: customer_id
         description: "{{ doc('olist__customer_id') }}"
+        data_tests:
+          - unique
+          - not_null
       - name: customer_unique_id
         description: "{{ doc('olist__customer_unique_id') }}"
+        data_tests:
+          - not_null
       - name: customer_zip_code_prefix
         description: "{{ doc('olist__zip_code_prefix') }}"
       - name: customer_city
         description: "{{ doc('olist__city') }}"
       - name: customer_state
         description: "{{ doc('olist__state') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: *brazilian_states
       - name: _loaded_at
         description: "{{ doc('olist__loaded_at') }}"
 
@@ -43,11 +69,19 @@ models:
     description: >
       Items within an order, one row per (`order_id`, `item_sequence`). Prices
       and freight cast to numeric.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [order_id, item_sequence]
     columns:
       - name: order_id
         description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - not_null
       - name: item_sequence
         description: "{{ doc('olist__order_item_id') }} Called `order_item_id` in the source."
+        data_tests:
+          - not_null
       - name: product_id
         description: "{{ doc('olist__product_id') }}"
       - name: seller_id
@@ -65,13 +99,26 @@ models:
     description: >
       Payments for an order, one row per (`order_id`, `payment_sequence`).
       Orders paid in several payments have several rows.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [order_id, payment_sequence]
     columns:
       - name: order_id
         description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - not_null
       - name: payment_sequence
         description: "{{ doc('olist__payment_sequential') }} Called `payment_sequential` in the source."
+        data_tests:
+          - not_null
       - name: payment_type
         description: "{{ doc('olist__payment_type') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [credit_card, boleto, voucher, debit_card, not_defined]
       - name: payment_installments
         description: "{{ doc('olist__payment_installments') }}"
       - name: payment_value
@@ -83,13 +130,27 @@ models:
     description: >
       Customer reviews, one row per (`review_id`, `order_id`). Comments are
       trimmed, and whitespace-only comments become null.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [review_id, order_id]
     columns:
       - name: review_id
         description: "{{ doc('olist__review_id') }}"
+        data_tests:
+          - not_null
       - name: order_id
         description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - not_null
       - name: review_score
         description: "{{ doc('olist__review_score') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
       - name: review_comment_title
         description: "{{ doc('olist__review_comment_title') }}"
       - name: review_comment_message
@@ -109,6 +170,9 @@ models:
     columns:
       - name: product_id
         description: "{{ doc('olist__product_id') }}"
+        data_tests:
+          - unique
+          - not_null
       - name: product_category_name
         description: "{{ doc('olist__product_category_name') }}"
       - name: product_name_length
@@ -133,8 +197,13 @@ models:
     columns:
       - name: product_category_name
         description: "{{ doc('olist__product_category_name') }}"
+        data_tests:
+          - unique
+          - not_null
       - name: product_category_name_english
         description: "{{ doc('olist__product_category_name_english') }}"
+        data_tests:
+          - not_null
       - name: _loaded_at
         description: "{{ doc('olist__loaded_at') }}"
 
@@ -143,12 +212,20 @@ models:
     columns:
       - name: seller_id
         description: "{{ doc('olist__seller_id') }}"
+        data_tests:
+          - unique
+          - not_null
       - name: seller_zip_code_prefix
         description: "{{ doc('olist__zip_code_prefix') }}"
       - name: seller_city
         description: "{{ doc('olist__city') }}"
       - name: seller_state
         description: "{{ doc('olist__state') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: *brazilian_states
       - name: _loaded_at
         description: "{{ doc('olist__loaded_at') }}"
 

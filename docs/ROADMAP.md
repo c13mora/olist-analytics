@@ -59,7 +59,7 @@ olist-analytics/
 ## Phase 2 — Sources and staging (1–2 weeks)
 - [x] `_olist__sources.yml` with descriptions and freshness rules
 - [x] One staging model per source table (rename, cast, clean)
-- [ ] Generic tests: unique/not_null PKs, accepted_values on statuses
+- [x] Generic tests: unique/not_null PKs, accepted_values on statuses
 - [ ] Handle known data issues (duplicate geolocation rows, multi-payment orders)
 
 ## Phase 3 — Intermediate and marts (2–3 weeks)
