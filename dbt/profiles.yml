@@ -8,6 +8,15 @@ olist:
       schema: main
       threads: 4
 
+    # Used by SQLFluff (see .sqlfluff), which runs from the repo root where the
+    # relative dev path above would not resolve. Linting only compiles SQL, so
+    # an in-memory database is enough.
+    lint:
+      type: duckdb
+      path: ":memory:"
+      schema: main
+      threads: 1
+
     snowflake:
       type: snowflake
       account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"

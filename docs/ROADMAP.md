@@ -57,14 +57,14 @@ olist-analytics/
 - [x] Decision record: why replay, and how status is derived
 
 ## Phase 2 — Sources and staging (1–2 weeks)
-- [ ] `_olist__sources.yml` with descriptions and freshness rules
-- [ ] One staging model per source table (rename, cast, clean, translate categories)
-- [ ] Generic tests: unique/not_null PKs, accepted_values on statuses
-- [ ] Handle known data issues (duplicate geolocation rows, multi-payment orders)
+- [x] `_olist__sources.yml` with descriptions and freshness rules
+- [x] One staging model per source table (rename, cast, clean)
+- [x] Generic tests: unique/not_null PKs, accepted_values on statuses
+- [x] Handle known data issues (duplicate geolocation rows, multi-payment orders)
 
 ## Phase 3 — Intermediate and marts (2–3 weeks)
 - [ ] Define the grain of each fact table in a decision record
-- [ ] Dimensions: customers, sellers, products, date
+- [ ] Dimensions: customers, sellers, products (with English category names), date
 - [ ] Facts: order items, payments, deliveries (promised vs actual dates)
 - [ ] Relationship tests between facts and dimensions
 - [ ] Add dbt_utils and dbt-expectations tests where they add value

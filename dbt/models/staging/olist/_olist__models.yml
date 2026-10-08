@@ -1,0 +1,248 @@
+# The 26 Brazilian states plus the Federal District (DF), defined once and
+# reused below through the YAML alias *brazilian_states.
+x-brazilian-states: &brazilian_states
+  [AC, AL, AM, AP, BA, CE, DF, ES, GO, MA, MG, MS, MT, PA,
+   PB, PE, PI, PR, RJ, RN, RO, RR, RS, SC, SE, SP, TO]
+
+models:
+  - name: stg_olist__orders
+    description: >
+      Orders, one row per order, with status and milestones as of the simulated
+      date. Timestamps renamed to the `_at` convention and cast to proper types.
+    columns:
+      - name: order_id
+        description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "{{ doc('olist__customer_id') }}"
+        data_tests:
+          - not_null
+      - name: order_status
+        description: "{{ doc('olist__order_status') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [created, approved, invoiced, processing, shipped, delivered, canceled, unavailable]
+      - name: purchased_at
+        description: "{{ doc('olist__order_purchase_timestamp') }}"
+      - name: approved_at
+        description: "{{ doc('olist__order_approved_at') }}"
+      - name: shipped_at
+        description: "{{ doc('olist__order_delivered_carrier_date') }}"
+      - name: delivered_at
+        description: "{{ doc('olist__order_delivered_customer_date') }}"
+      - name: estimated_delivery_date
+        description: "{{ doc('olist__order_estimated_delivery_date') }}"
+      - name: _loaded_at
+        description: "{{ doc('olist__loaded_at') }}"
+
+  - name: stg_olist__customers
+    description: Customer details, one row per `customer_id` (which is one per order).
+    columns:
+      - name: customer_id
+        description: "{{ doc('olist__customer_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_unique_id
+        description: "{{ doc('olist__customer_unique_id') }}"
+        data_tests:
+          - not_null
+      - name: customer_zip_code_prefix
+        description: "{{ doc('olist__zip_code_prefix') }}"
+      - name: customer_city
+        description: "{{ doc('olist__city') }}"
+      - name: customer_state
+        description: "{{ doc('olist__state') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: *brazilian_states
+      - name: _loaded_at
+        description: "{{ doc('olist__loaded_at') }}"
+
+  - name: stg_olist__order_items
+    description: >
+      Items within an order, one row per (`order_id`, `item_sequence`). Prices
+      and freight cast to numeric.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [order_id, item_sequence]
+    columns:
+      - name: order_id
+        description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - not_null
+      - name: item_sequence
+        description: "{{ doc('olist__order_item_id') }} Called `order_item_id` in the source."
+        data_tests:
+          - not_null
+      - name: product_id
+        description: "{{ doc('olist__product_id') }}"
+      - name: seller_id
+        description: "{{ doc('olist__seller_id') }}"
+      - name: shipping_limit_at
+        description: "{{ doc('olist__shipping_limit_date') }}"
+      - name: price
+        description: "{{ doc('olist__price') }}"
+      - name: freight_value
+        description: "{{ doc('olist__freight_value') }}"
+      - name: _loaded_at
+        description: "{{ doc('olist__loaded_at') }}"
+
+  - name: stg_olist__order_payments
+    description: >
+      Payments for an order, one row per (`order_id`, `payment_sequence`).
+      Orders paid in several payments have several rows.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [order_id, payment_sequence]
+    columns:
+      - name: order_id
+        description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - not_null
+      - name: payment_sequence
+        description: "{{ doc('olist__payment_sequential') }} Called `payment_sequential` in the source."
+        data_tests:
+          - not_null
+      - name: payment_type
+        description: "{{ doc('olist__payment_type') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [credit_card, boleto, voucher, debit_card, not_defined]
+      - name: payment_installments
+        description: "{{ doc('olist__payment_installments') }}"
+      - name: payment_value
+        description: "{{ doc('olist__payment_value') }}"
+      - name: _loaded_at
+        description: "{{ doc('olist__loaded_at') }}"
+
+  - name: stg_olist__order_reviews
+    description: >
+      Customer reviews, one row per (`review_id`, `order_id`). Comments are
+      trimmed, and whitespace-only comments become null.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [review_id, order_id]
+    columns:
+      - name: review_id
+        description: "{{ doc('olist__review_id') }}"
+        data_tests:
+          - not_null
+      - name: order_id
+        description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - not_null
+      - name: review_score
+        description: "{{ doc('olist__review_score') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+      - name: review_comment_title
+        description: "{{ doc('olist__review_comment_title') }}"
+      - name: review_comment_message
+        description: "{{ doc('olist__review_comment_message') }}"
+      - name: review_created_at
+        description: "{{ doc('olist__review_creation_date') }}"
+      - name: review_answered_at
+        description: "{{ doc('olist__review_answer_timestamp') }}"
+      - name: _loaded_at
+        description: "{{ doc('olist__loaded_at') }}"
+
+  - name: stg_olist__products
+    description: >
+      Product catalog, one row per product. Misspelled source columns fixed
+      (`lenght` to `length`). Category stays in Portuguese; it is translated
+      downstream because staging does no joins.
+    columns:
+      - name: product_id
+        description: "{{ doc('olist__product_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: product_category_name
+        description: "{{ doc('olist__product_category_name') }}"
+      - name: product_name_length
+        description: "Number of characters in the product name."
+      - name: product_description_length
+        description: "Number of characters in the product description."
+      - name: product_photos_qty
+        description: "{{ doc('olist__product_photos_qty') }}"
+      - name: product_weight_g
+        description: "{{ doc('olist__product_weight_g') }}"
+      - name: product_length_cm
+        description: "{{ doc('olist__product_length_cm') }}"
+      - name: product_height_cm
+        description: "{{ doc('olist__product_height_cm') }}"
+      - name: product_width_cm
+        description: "{{ doc('olist__product_width_cm') }}"
+      - name: _loaded_at
+        description: "{{ doc('olist__loaded_at') }}"
+
+  - name: stg_olist__product_category_name_translation
+    description: Portuguese to English translation of product categories, one row per category.
+    columns:
+      - name: product_category_name
+        description: "{{ doc('olist__product_category_name') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: product_category_name_english
+        description: "{{ doc('olist__product_category_name_english') }}"
+        data_tests:
+          - not_null
+      - name: _loaded_at
+        description: "{{ doc('olist__loaded_at') }}"
+
+  - name: stg_olist__sellers
+    description: Sellers on the marketplace, one row per seller.
+    columns:
+      - name: seller_id
+        description: "{{ doc('olist__seller_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: seller_zip_code_prefix
+        description: "{{ doc('olist__zip_code_prefix') }}"
+      - name: seller_city
+        description: "{{ doc('olist__city') }}"
+      - name: seller_state
+        description: "{{ doc('olist__state') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: *brazilian_states
+      - name: _loaded_at
+        description: "{{ doc('olist__loaded_at') }}"
+
+  - name: stg_olist__geolocation
+    description: >
+      Latitude and longitude points per zip code prefix, cast to float. Not
+      unique per prefix and still contains the source's duplicate rows.
+    columns:
+      - name: geolocation_zip_code_prefix
+        description: "{{ doc('olist__zip_code_prefix') }}"
+      - name: geolocation_lat
+        description: "{{ doc('olist__geolocation_lat') }}"
+      - name: geolocation_lng
+        description: "{{ doc('olist__geolocation_lng') }}"
+      - name: geolocation_city
+        description: "{{ doc('olist__city') }}"
+      - name: geolocation_state
+        description: "{{ doc('olist__state') }}"
+      - name: _loaded_at
+        description: "{{ doc('olist__loaded_at') }}"

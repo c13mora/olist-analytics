@@ -1,0 +1,65 @@
+models:
+  - name: int_geolocation__grouped_by_zip
+    description: >
+      One point per zip code prefix, for placing customers and sellers on a
+      map. Exact duplicate points are removed, points outside a rough bounding
+      box around Brazil are dropped, and the remaining points are reduced to
+      their median latitude and longitude. Prefixes with no point inside Brazil
+      are absent, as are the prefixes the source never covered (157 customer
+      prefixes and 7 sellers).
+    columns:
+      - name: zip_code_prefix
+        description: "{{ doc('olist__zip_code_prefix') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: latitude
+        description: Median latitude of the prefix's distinct points inside Brazil.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: -34
+                max_value: 6
+      - name: longitude
+        description: Median longitude of the prefix's distinct points inside Brazil.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: -74
+                max_value: -34
+      - name: state
+        description: >
+          Most common state among the prefix's points. 8 prefixes have points
+          in two states.
+      - name: point_count
+        description: Number of distinct points the coordinates are based on.
+
+  - name: int_order_payments__aggregated_to_orders
+    description: >
+      Payments rolled up to one row per order, for order-level facts. Orders
+      paid in several payments (2,961, mostly a credit card plus vouchers)
+      become a single row. The one order without any payment is absent.
+    columns:
+      - name: order_id
+        description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: payment_count
+        description: Number of payments for the order.
+      - name: total_payment_value
+        description: Total paid for the order in BRL, across all payments.
+        data_tests:
+          - not_null
+      - name: voucher_payment_value
+        description: Part of the total paid with vouchers, in BRL. Zero when no voucher was used.
+      - name: main_payment_type
+        description: >
+          Payment type of the largest payment (ties go to the earliest). See
+          `payment_type` in staging for the possible values.
+        data_tests:
+          - not_null
+      - name: max_payment_installments
+        description: Highest number of installments among the order's payments.
