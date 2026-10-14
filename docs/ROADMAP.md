@@ -63,7 +63,7 @@ olist-analytics/
 - [x] Handle known data issues (duplicate geolocation rows, multi-payment orders)
 
 ## Phase 3 — Intermediate and marts (2–3 weeks)
-- [ ] Define the grain of each fact table in a decision record
+- [x] Define the grain of each fact table in a decision record
 - [ ] Dimensions: customers, sellers, products (with English category names), date
 - [ ] Facts: order items, payments, deliveries (promised vs actual dates)
 - [ ] Relationship tests between facts and dimensions
