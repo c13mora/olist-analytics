@@ -64,7 +64,7 @@ olist-analytics/
 
 ## Phase 3 — Intermediate and marts (2–3 weeks)
 - [x] Define the grain of each fact table in a decision record
-- [ ] Dimensions: customers, sellers, products (with English category names), date
+- [x] Dimensions: customers, sellers, products (with English category names), date
 - [ ] Facts: order items, payments, deliveries (promised vs actual dates)
 - [ ] Relationship tests between facts and dimensions
 - [ ] Add dbt_utils and dbt-expectations tests where they add value

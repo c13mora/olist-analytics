@@ -1,0 +1,130 @@
+models:
+  - name: dim_customers
+    description: >
+      One row per person (`customer_unique_id`), not per order. Location comes
+      from the person's most recent order as of the simulated date; the
+      location of each specific order is in `fct_deliveries`. See decision
+      record 003.
+    columns:
+      - name: customer_unique_id
+        description: "{{ doc('olist__customer_unique_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_zip_code_prefix
+        description: "{{ doc('olist__zip_code_prefix') }} From the most recent order."
+      - name: customer_city
+        description: "{{ doc('olist__city') }} From the most recent order."
+      - name: customer_state
+        description: "{{ doc('olist__state') }} From the most recent order."
+        data_tests:
+          - not_null
+      - name: customer_latitude
+        description: Latitude of the zip code prefix. Null when the source has no geolocation for it.
+      - name: customer_longitude
+        description: Longitude of the zip code prefix. Null when the source has no geolocation for it.
+      - name: first_purchased_at
+        description: When the person placed their first order. Defines their cohort.
+        data_tests:
+          - not_null
+      - name: last_purchased_at
+        description: When the person placed their most recent order.
+        data_tests:
+          - not_null
+      - name: order_count
+        description: Number of orders the person placed, in any status, as of the simulated date.
+        data_tests:
+          - not_null
+
+  - name: dim_sellers
+    description: Sellers on the marketplace, one row per seller, with coordinates of their zip code prefix.
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('stg_olist__sellers')
+    columns:
+      - name: seller_id
+        description: "{{ doc('olist__seller_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: seller_zip_code_prefix
+        description: "{{ doc('olist__zip_code_prefix') }}"
+      - name: seller_city
+        description: "{{ doc('olist__city') }}"
+      - name: seller_state
+        description: "{{ doc('olist__state') }}"
+      - name: seller_latitude
+        description: Latitude of the zip code prefix. Null for the 7 sellers whose prefix has no geolocation.
+      - name: seller_longitude
+        description: Longitude of the zip code prefix. Null for the 7 sellers whose prefix has no geolocation.
+
+  - name: dim_products
+    description: >
+      Product catalog, one row per product, with the category name in
+      Portuguese and English. Translations come from Olist's table plus a seed
+      for the two categories it lacks; products without a category are
+      'unknown' in English.
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('stg_olist__products')
+    columns:
+      - name: product_id
+        description: "{{ doc('olist__product_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: product_category_name
+        description: "{{ doc('olist__product_category_name') }}"
+      - name: product_category_name_english
+        description: >
+          Product category in English. 'unknown' for the 610 products without
+          a category. Never null: a category missing from both translation
+          sources fails the not_null test.
+        data_tests:
+          - not_null
+      - name: product_name_length
+        description: Number of characters in the product name.
+      - name: product_description_length
+        description: Number of characters in the product description.
+      - name: product_photos_qty
+        description: "{{ doc('olist__product_photos_qty') }}"
+      - name: product_weight_g
+        description: "{{ doc('olist__product_weight_g') }}"
+      - name: product_length_cm
+        description: "{{ doc('olist__product_length_cm') }}"
+      - name: product_height_cm
+        description: "{{ doc('olist__product_height_cm') }}"
+      - name: product_width_cm
+        description: "{{ doc('olist__product_width_cm') }}"
+
+  - name: dim_date
+    description: >
+      One row per day from 2016-09-01 to 2018-12-31, covering every purchase
+      and promised delivery date. Facts join on the date itself, once per date
+      they carry.
+    columns:
+      - name: date_day
+        description: The calendar day.
+        data_tests:
+          - unique
+          - not_null
+      - name: year_number
+        description: Calendar year.
+      - name: quarter_of_year
+        description: Calendar quarter, 1 to 4.
+      - name: month_of_year
+        description: Calendar month, 1 to 12.
+      - name: day_of_month
+        description: Day of the month, 1 to 31.
+      - name: day_of_week
+        description: Day of the week, 0 (Sunday) to 6 (Saturday).
+      - name: is_weekend
+        description: True on Saturdays and Sundays.
+      - name: week_start_date
+        description: Monday of the week the day falls in.
+      - name: month_start_date
+        description: First day of the month.
+      - name: quarter_start_date
+        description: First day of the quarter.

@@ -1,0 +1,21 @@
+seeds:
+  - name: product_category_name_translation_additions
+    description: >
+      English names for the two product categories missing from Olist's
+      translation table (13 products). Written by hand in the source's
+      snake_case style, and combined with the source translations in
+      dim_products.
+    config:
+      column_types:
+        product_category_name: varchar
+        product_category_name_english: varchar
+    columns:
+      - name: product_category_name
+        description: "{{ doc('olist__product_category_name') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: product_category_name_english
+        description: "{{ doc('olist__product_category_name_english') }}"
+        data_tests:
+          - not_null
