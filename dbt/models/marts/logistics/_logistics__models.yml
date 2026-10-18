@@ -19,6 +19,10 @@ models:
         description: "{{ doc('olist__customer_unique_id') }}"
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_unique_id
       - name: customer_zip_code_prefix
         description: >
           {{ doc('olist__zip_code_prefix') }} Where this order was delivered,
@@ -32,6 +36,10 @@ models:
         description: Date the order was placed. Joins to `dim_date`.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
       - name: purchased_at
         description: "{{ doc('olist__order_purchase_timestamp') }}"
       - name: approved_at
@@ -42,8 +50,19 @@ models:
         description: "{{ doc('olist__order_delivered_customer_date') }}"
       - name: estimated_delivery_date
         description: "{{ doc('olist__order_estimated_delivery_date') }} Joins to `dim_date`."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
       - name: delivery_date
         description: Date the order was delivered. Null until then. Joins to `dim_date`.
+        data_tests:
+          # Nulls (undelivered orders) are ignored by the relationships test.
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
       - name: item_count
         description: Number of items in the order. Zero for the orders without items.
       - name: seller_count

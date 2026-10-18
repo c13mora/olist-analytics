@@ -19,6 +19,11 @@ models:
         description: "{{ doc('olist__order_id') }}"
         data_tests:
           - not_null
+          # fct_deliveries holds every order, so no item can belong to an unknown one.
+          - relationships:
+              arguments:
+                to: ref('fct_deliveries')
+                field: order_id
       - name: item_sequence
         description: "{{ doc('olist__order_item_id') }}"
         data_tests:
@@ -27,20 +32,36 @@ models:
         description: "{{ doc('olist__customer_unique_id') }}"
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_unique_id
       - name: product_id
         description: "{{ doc('olist__product_id') }}"
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
       - name: seller_id
         description: "{{ doc('olist__seller_id') }}"
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_sellers')
+                field: seller_id
       - name: order_status
         description: "{{ doc('olist__order_status') }}"
       - name: purchase_date
         description: Date the order was placed. Joins to `dim_date`.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
       - name: purchased_at
         description: "{{ doc('olist__order_purchase_timestamp') }}"
       - name: shipping_limit_at
@@ -71,6 +92,11 @@ models:
         description: "{{ doc('olist__order_id') }}"
         data_tests:
           - not_null
+          # fct_deliveries holds every order, so no payment can belong to an unknown one.
+          - relationships:
+              arguments:
+                to: ref('fct_deliveries')
+                field: order_id
       - name: payment_sequence
         description: "{{ doc('olist__payment_sequential') }}"
         data_tests:
@@ -79,12 +105,20 @@ models:
         description: "{{ doc('olist__customer_unique_id') }}"
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_unique_id
       - name: order_status
         description: "{{ doc('olist__order_status') }}"
       - name: purchase_date
         description: Date the order was placed. Joins to `dim_date`.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
       - name: payment_type
         description: "{{ doc('olist__payment_type') }}"
       - name: payment_installments
