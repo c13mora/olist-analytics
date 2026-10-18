@@ -63,11 +63,11 @@ olist-analytics/
 - [x] Handle known data issues (duplicate geolocation rows, multi-payment orders)
 
 ## Phase 3 — Intermediate and marts (2–3 weeks)
-- [ ] Define the grain of each fact table in a decision record
-- [ ] Dimensions: customers, sellers, products (with English category names), date
-- [ ] Facts: order items, payments, deliveries (promised vs actual dates)
-- [ ] Relationship tests between facts and dimensions
-- [ ] Add dbt_utils and dbt-expectations tests where they add value
+- [x] Define the grain of each fact table in a decision record
+- [x] Dimensions: customers, sellers, products (with English category names), date
+- [x] Facts: order items, payments, deliveries (promised vs actual dates)
+- [x] Relationship tests between facts and dimensions
+- [x] Add dbt_utils and dbt-expectations tests where they add value
 
 ## Phase 4 — Incremental models and snapshots (1–2 weeks)
 - [ ] `snap_orders` snapshot capturing status changes (SCD2)

@@ -1,0 +1,155 @@
+models:
+  - name: fct_order_items
+    description: >
+      One row per order item, the finest grain for sales. Order attributes
+      (person, status, purchase date) repeat on each of the order's items, so
+      count orders with `count(distinct order_id)`. Orders without items are
+      not here; see `fct_deliveries` for every order. See decision record 003.
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('stg_olist__order_items')
+      # The seller's shipping deadline is set at purchase, so it can never
+      # come before it. A violation means mixed-up timestamps upstream.
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments:
+            column_A: shipping_limit_at
+            column_B: purchased_at
+            or_equal: true
+    columns:
+      - name: order_item_key
+        description: Surrogate key of the item, built from `order_id` and `item_sequence`.
+        data_tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - not_null
+          # fct_deliveries holds every order, so no item can belong to an unknown one.
+          - relationships:
+              arguments:
+                to: ref('fct_deliveries')
+                field: order_id
+      - name: item_sequence
+        description: "{{ doc('olist__order_item_id') }}"
+        data_tests:
+          - not_null
+      - name: customer_unique_id
+        description: "{{ doc('olist__customer_unique_id') }}"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_unique_id
+      - name: product_id
+        description: "{{ doc('olist__product_id') }}"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+      - name: seller_id
+        description: "{{ doc('olist__seller_id') }}"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_sellers')
+                field: seller_id
+      - name: order_status
+        description: "{{ doc('olist__order_status') }}"
+      - name: purchase_date
+        description: Date the order was placed. Joins to `dim_date`.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
+      - name: purchased_at
+        description: "{{ doc('olist__order_purchase_timestamp') }}"
+      - name: shipping_limit_at
+        description: "{{ doc('olist__shipping_limit_date') }}"
+      - name: price
+        description: "{{ doc('olist__price') }}"
+        data_tests:
+          # A free or negative item would distort revenue; none exist today.
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+      - name: freight_value
+        description: "{{ doc('olist__freight_value') }}"
+        data_tests:
+          # Free shipping (0) is valid; negative freight is not.
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+      - name: total_item_value
+        description: Price plus freight for the item, in BRL.
+
+  - name: fct_payments
+    description: >
+      One row per payment. Kept separate from order items, because joining the
+      two would multiply rows for orders with several of both. The one order
+      without payments is not here. See decision record 003.
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('stg_olist__order_payments')
+    columns:
+      - name: payment_key
+        description: Surrogate key of the payment, built from `order_id` and `payment_sequence`.
+        data_tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - not_null
+          # fct_deliveries holds every order, so no payment can belong to an unknown one.
+          - relationships:
+              arguments:
+                to: ref('fct_deliveries')
+                field: order_id
+      - name: payment_sequence
+        description: "{{ doc('olist__payment_sequential') }}"
+        data_tests:
+          - not_null
+      - name: customer_unique_id
+        description: "{{ doc('olist__customer_unique_id') }}"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_unique_id
+      - name: order_status
+        description: "{{ doc('olist__order_status') }}"
+      - name: purchase_date
+        description: Date the order was placed. Joins to `dim_date`.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
+      - name: payment_type
+        description: "{{ doc('olist__payment_type') }}"
+      - name: payment_installments
+        description: "{{ doc('olist__payment_installments') }}"
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+      - name: payment_value
+        description: "{{ doc('olist__payment_value') }}"
+        data_tests:
+          # 9 payments are exactly 0 (e.g. fully discounted vouchers), so 0 is
+          # allowed; a negative payment (a refund) would need its own handling.
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0

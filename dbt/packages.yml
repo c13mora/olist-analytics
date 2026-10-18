@@ -2,9 +2,10 @@ packages:
   - package: dbt-labs/dbt_utils
     version: [">=1.0.0"]
 
-  # TODO: switch to Metaplane fork once hub name is confirmed (see CLAUDE.md)
-  - package: calogica/dbt_expectations
-    version: [">=0.10.0"]
+  # Metaplane's maintained fork; the original calogica package is frozen at
+  # 0.10.4 and the dbt hub redirects it here.
+  - package: metaplane/dbt_expectations
+    version: [">=0.10.10", "<0.11.0"]
 
   - package: dbt-labs/dbt_project_evaluator
     version: [">=0.8.0"]
