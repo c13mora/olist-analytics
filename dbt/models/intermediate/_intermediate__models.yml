@@ -63,3 +63,11 @@ models:
           - not_null
       - name: max_payment_installments
         description: Highest number of installments among the order's payments.
+
+  - name: int_orders__joined_to_customers
+    description: >
+      Orders with the person who placed them (`customer_unique_id`) and the
+      zip code and state the order went to. Every fact needs the person, and
+      Olist links it to orders only through the per-order `customer_id`, so
+      the join lives here once. Ephemeral (the project default): it is a 1:1
+      join, and the facts built on it test its grain.

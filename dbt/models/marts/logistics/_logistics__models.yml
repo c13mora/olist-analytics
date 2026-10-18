@@ -1,0 +1,79 @@
+models:
+  - name: fct_deliveries
+    description: >
+      One row per order, covering every order, delivered or not. Carrier and
+      delivery dates only exist per order, and keeping undelivered orders
+      gives on-time and cancellation rates the right denominator. See decision
+      record 003.
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('stg_olist__orders')
+    columns:
+      - name: order_id
+        description: "{{ doc('olist__order_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_unique_id
+        description: "{{ doc('olist__customer_unique_id') }}"
+        data_tests:
+          - not_null
+      - name: customer_zip_code_prefix
+        description: >
+          {{ doc('olist__zip_code_prefix') }} Where this order was delivered,
+          which can differ from the person's current location in
+          `dim_customers`.
+      - name: customer_state
+        description: "{{ doc('olist__state') }} Where this order was delivered."
+      - name: order_status
+        description: "{{ doc('olist__order_status') }}"
+      - name: purchase_date
+        description: Date the order was placed. Joins to `dim_date`.
+        data_tests:
+          - not_null
+      - name: purchased_at
+        description: "{{ doc('olist__order_purchase_timestamp') }}"
+      - name: approved_at
+        description: "{{ doc('olist__order_approved_at') }}"
+      - name: shipped_at
+        description: "{{ doc('olist__order_delivered_carrier_date') }}"
+      - name: delivered_at
+        description: "{{ doc('olist__order_delivered_customer_date') }}"
+      - name: estimated_delivery_date
+        description: "{{ doc('olist__order_estimated_delivery_date') }} Joins to `dim_date`."
+      - name: delivery_date
+        description: Date the order was delivered. Null until then. Joins to `dim_date`.
+      - name: item_count
+        description: Number of items in the order. Zero for the orders without items.
+      - name: seller_count
+        description: Number of distinct sellers in the order.
+      - name: total_freight_value
+        description: Freight for the whole order in BRL. Null for orders without items.
+      - name: days_to_carrier
+        description: Calendar days from purchase to carrier pickup. Null until pickup.
+      - name: days_in_transit
+        description: Calendar days from carrier pickup to delivery. Null until delivery.
+      - name: days_to_deliver
+        description: Calendar days from purchase to delivery. Null until delivery.
+      - name: days_late_vs_estimate
+        description: >
+          Calendar days between the promised and the actual delivery date.
+          Positive when late, negative when early, null until delivery.
+      - name: delivery_status
+        description: >
+          `on_time` (delivered on or before the promised date), `late`, or
+          `not_delivered`. Based on the delivery date rather than the order
+          status, because 6 canceled orders were still delivered.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [on_time, late, not_delivered]
+      - name: has_timestamp_anomaly
+        description: >
+          True when the source timestamps are out of order: carrier pickup
+          before approval or purchase, or delivery before pickup. Such orders
+          are kept but can be excluded from SLA analysis.
+        data_tests:
+          - not_null
