@@ -5,6 +5,19 @@ models:
       from the person's most recent order as of the simulated date; the
       location of each specific order is in `fct_deliveries`. See decision
       record 003.
+    data_tests:
+      # Rolling orders up to people must not lose or duplicate any: the order
+      # counts add up to the number of orders.
+      - dbt_expectations.expect_table_aggregation_to_equal_other_table:
+          arguments:
+            expression: sum(order_count)
+            compare_model: ref('fct_deliveries')
+            compare_expression: count(*)
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments:
+            column_A: last_purchased_at
+            column_B: first_purchased_at
+            or_equal: true
     columns:
       - name: customer_unique_id
         description: "{{ doc('olist__customer_unique_id') }}"
@@ -13,6 +26,11 @@ models:
           - not_null
       - name: customer_zip_code_prefix
         description: "{{ doc('olist__zip_code_prefix') }} From the most recent order."
+        data_tests:
+          # Five digits, leading zeros included: the reason raw is loaded as text.
+          - dbt_expectations.expect_column_values_to_match_regex:
+              arguments:
+                regex: "^[0-9]{5}$"
       - name: customer_city
         description: "{{ doc('olist__city') }} From the most recent order."
       - name: customer_state
@@ -35,6 +53,9 @@ models:
         description: Number of orders the person placed, in any status, as of the simulated date.
         data_tests:
           - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
 
   - name: dim_sellers
     description: Sellers on the marketplace, one row per seller, with coordinates of their zip code prefix.
@@ -50,6 +71,10 @@ models:
           - not_null
       - name: seller_zip_code_prefix
         description: "{{ doc('olist__zip_code_prefix') }}"
+        data_tests:
+          - dbt_expectations.expect_column_values_to_match_regex:
+              arguments:
+                regex: "^[0-9]{5}$"
       - name: seller_city
         description: "{{ doc('olist__city') }}"
       - name: seller_state
@@ -110,6 +135,12 @@ models:
         data_tests:
           - unique
           - not_null
+          # Exactly one day apart, with no gaps: a fact date can only find its
+          # day if every day exists.
+          - dbt_utils.sequential_values:
+              arguments:
+                interval: 1
+                datepart: day
       - name: year_number
         description: Calendar year.
       - name: quarter_of_year

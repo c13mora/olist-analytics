@@ -9,6 +9,13 @@ models:
       - dbt_utils.equal_rowcount:
           arguments:
             compare_model: ref('stg_olist__order_items')
+      # The seller's shipping deadline is set at purchase, so it can never
+      # come before it. A violation means mixed-up timestamps upstream.
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments:
+            column_A: shipping_limit_at
+            column_B: purchased_at
+            or_equal: true
     columns:
       - name: order_item_key
         description: Surrogate key of the item, built from `order_id` and `item_sequence`.
@@ -68,8 +75,19 @@ models:
         description: "{{ doc('olist__shipping_limit_date') }}"
       - name: price
         description: "{{ doc('olist__price') }}"
+        data_tests:
+          # A free or negative item would distort revenue; none exist today.
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
       - name: freight_value
         description: "{{ doc('olist__freight_value') }}"
+        data_tests:
+          # Free shipping (0) is valid; negative freight is not.
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
       - name: total_item_value
         description: Price plus freight for the item, in BRL.
 
@@ -123,5 +141,15 @@ models:
         description: "{{ doc('olist__payment_type') }}"
       - name: payment_installments
         description: "{{ doc('olist__payment_installments') }}"
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
       - name: payment_value
         description: "{{ doc('olist__payment_value') }}"
+        data_tests:
+          # 9 payments are exactly 0 (e.g. fully discounted vouchers), so 0 is
+          # allowed; a negative payment (a refund) would need its own handling.
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
