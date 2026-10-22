@@ -71,7 +71,7 @@ olist-analytics/
 
 ## Phase 4 — Incremental models and snapshots (1–2 weeks)
 - [x] `snap_orders` snapshot capturing status changes (SCD2)
-- [ ] Convert the largest fact to incremental; document the strategy
+- [x] Convert the largest fact to incremental; document the strategy
 - [ ] Demo: advance replay several days, show snapshot history and incremental runs
 - [ ] Source freshness wired into CI
 
