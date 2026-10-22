@@ -36,6 +36,7 @@ matter more than cleverness.
 ```
 ingestion/        replay loader (dlt) and simulation state
 dbt/              dbt project (models, snapshots, macros, seeds, tests)
+scripts/          demo driving the replay and dbt (scripts/demo.py)
 dashboard/        Evidence project
 data/raw/         Olist CSVs (gitignored, never commit)
 docs/             ROADMAP.md and decision records (docs/decisions/)
@@ -47,7 +48,8 @@ docs/             ROADMAP.md and decision records (docs/decisions/)
 ```bash
 uv sync                                         # install Python deps
 uv run python ingestion/replay.py --days 1      # advance the simulation by N days
-uv run python ingestion/replay.py --reset       # wipe raw schema, restart at day 0
+uv run python ingestion/replay.py --reset       # wipe raw + snapshot + incremental fact, restart at day 0
+uv run python scripts/demo.py --reset --days 7  # demo incremental runs and snapshot history
 cd dbt && uv run dbt deps                       # install dbt packages
 uv run dbt build --target dev                   # run + test everything on DuckDB
 uv run dbt build -s <model>+                    # build a model and its children

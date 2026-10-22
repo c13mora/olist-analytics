@@ -68,14 +68,29 @@ To verify that loads are idempotent, replay the same day twice and compare:
 uv run python ingestion/check_idempotency.py   # advances one day; exits 1 if raw changed
 ```
 
+`--reset` also drops the order status snapshot and the incremental
+`fct_order_items`, so no history "from the future" survives a restart; dbt
+rebuilds them on its next run.
+
+### 5. Watch incremental models and snapshots at work
+
+```bash
+uv run python scripts/demo.py --reset --days 7
+```
+
+Replays seven days one at a time and shows, per day, what the incremental
+model processed and what the snapshot recorded, then one order's status
+history. See [docs/demo.md](docs/demo.md) for a walkthrough of the output.
+
 ## Architecture
 
 ```
 ingestion/    replay loader (dlt) — simulates daily incremental loads
 dbt/          dbt project: staging → intermediate → marts, plus snapshots
+scripts/      demo of incremental models and snapshots
 dashboard/    Evidence static site
 data/raw/     Olist CSVs (gitignored)
-docs/         ROADMAP and decision records
+docs/         ROADMAP, decision records and demo walkthrough
 ```
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the full build plan.
