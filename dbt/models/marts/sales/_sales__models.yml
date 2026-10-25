@@ -90,6 +90,13 @@ models:
                 min_value: 0
       - name: total_item_value
         description: Price plus freight for the item, in BRL.
+      - name: _loaded_at
+        description: >
+          The later of the item's and its order's load time (UTC). Moves
+          forward whenever the order is reloaded, e.g. on a status change, so
+          incremental runs use it to find new and changed items.
+        data_tests:
+          - not_null
 
   - name: fct_payments
     description: >

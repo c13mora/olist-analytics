@@ -30,13 +30,27 @@ data/raw/
 └── product_category_name_translation.csv
 ```
 
-Alternatively, use the Kaggle CLI (requires `~/.kaggle/kaggle.json` with your API token):
+Alternatively, use the Kaggle CLI. Create an API token in your Kaggle
+settings (Settings → API), then either save it as the only content of
+`~/.kaggle/access_token` or set it in the `KAGGLE_API_TOKEN` environment
+variable:
 
 ```bash
-uvx kaggle datasets download olistbr/brazilian-ecommerce -p data/raw/ --unzip
+uvx --from "kaggle>=2.2" kaggle datasets download olistbr/brazilian-ecommerce -p data/raw/ --unzip
 ```
 
 > `data/` is gitignored — the CSVs are never committed.
+
+### CI
+
+Every pull request into `main` runs two GitHub Actions jobs
+([`ci.yml`](.github/workflows/ci.yml)): SQLFluff, and a build on real
+replayed data. The build job downloads the CSVs from Kaggle with a token
+stored in the `KAGGLE_API_TOKEN` repository secret and caches them. It then
+loads three months, builds and tests every model, loads one more day and
+builds again (exercising the incremental model and the snapshot), and checks
+source freshness. To run it in a fork, add your own Kaggle token as that
+secret.
 
 ### 3. Set up dbt
 
@@ -68,14 +82,29 @@ To verify that loads are idempotent, replay the same day twice and compare:
 uv run python ingestion/check_idempotency.py   # advances one day; exits 1 if raw changed
 ```
 
+`--reset` also drops the order status snapshot and the incremental
+`fct_order_items`, so no history "from the future" survives a restart; dbt
+rebuilds them on its next run.
+
+### 5. Watch incremental models and snapshots at work
+
+```bash
+uv run python scripts/demo.py --reset --days 7
+```
+
+Replays seven days one at a time and shows, per day, what the incremental
+model processed and what the snapshot recorded, then one order's status
+history. See [docs/demo.md](docs/demo.md) for a walkthrough of the output.
+
 ## Architecture
 
 ```
 ingestion/    replay loader (dlt) — simulates daily incremental loads
 dbt/          dbt project: staging → intermediate → marts, plus snapshots
+scripts/      demo of incremental models and snapshots
 dashboard/    Evidence static site
 data/raw/     Olist CSVs (gitignored)
-docs/         ROADMAP and decision records
+docs/         ROADMAP, decision records and demo walkthrough
 ```
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the full build plan.

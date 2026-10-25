@@ -70,10 +70,10 @@ olist-analytics/
 - [x] Add dbt_utils and dbt-expectations tests where they add value
 
 ## Phase 4 — Incremental models and snapshots (1–2 weeks)
-- [ ] `snap_orders` snapshot capturing status changes (SCD2)
-- [ ] Convert the largest fact to incremental; document the strategy
-- [ ] Demo: advance replay several days, show snapshot history and incremental runs
-- [ ] Source freshness wired into CI
+- [x] `snap_orders` snapshot capturing status changes (SCD2)
+- [x] Convert the largest fact to incremental; document the strategy
+- [x] Demo: advance replay several days, show snapshot history and incremental runs
+- [x] Source freshness wired into CI
 
 ## Phase 5 — Evidence dashboard (2 weeks)
 - [ ] Pages: executive overview, seller performance, delivery SLAs, customer cohorts

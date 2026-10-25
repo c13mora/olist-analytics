@@ -4,7 +4,7 @@ The raw schema always reflects the source system as of the end of the
 simulated date stored in state.json.
 
 Usage:
-    uv run python ingestion/replay.py --reset    # wipe raw schema, load reference data and orders up to day 0
+    uv run python ingestion/replay.py --reset    # wipe raw (and the snapshot and incremental fact), load reference data and orders up to day 0
     uv run python ingestion/replay.py --days N   # advance the simulation by N days
 """
 
@@ -28,6 +28,13 @@ STATE_PATH = Path(__file__).resolve().parent / "state.json"
 
 PIPELINE_NAME = "olist_replay"
 DATASET_NAME = "raw"
+
+# dbt tables that build up history across runs instead of being rebuilt each
+# time: the order status snapshot and the incremental order items fact. After
+# a reset they would hold rows "from the future" of the restarted simulation,
+# so reset drops them and dbt rebuilds them from scratch on its next run. The
+# schema names follow dbt's default naming on the dev target (main_<schema>).
+DBT_ACCUMULATING_TABLES = ["main_snapshots.snap_orders", "main_marts.fct_order_items"]
 
 # Day 0 of the simulation. 2016 has only ~330 orders spread over three months,
 # so reset loads them as an initial backfill and the daily cadence starts on
@@ -260,7 +267,7 @@ def write_state(simulated_date: date) -> None:
 
 
 def reset() -> None:
-    """Wipe the raw schema, reload reference data and backfill orders up to day 0."""
+    """Wipe raw and dbt's accumulating tables, reload reference data and backfill orders up to day 0."""
     missing = [f for f in SOURCE_FILES.values() if not (RAW_DIR / f).exists()]
     if missing:
         sys.exit(f"Missing CSVs in {RAW_DIR}: {', '.join(missing)}. See README step 2.")
@@ -269,6 +276,8 @@ def reset() -> None:
     # folder. Drop both, otherwise dlt would assume the old tables still exist.
     with duckdb.connect(str(DUCKDB_PATH)) as con:
         con.execute(f"drop schema if exists {DATASET_NAME} cascade")
+        for table in DBT_ACCUMULATING_TABLES:
+            con.execute(f"drop table if exists {table}")
     make_pipeline().drop()
 
     con = source_connection()
@@ -309,7 +318,7 @@ def main() -> None:
     action.add_argument(
         "--reset",
         action="store_true",
-        help="wipe the raw schema, load reference data and orders up to day 0",
+        help="wipe raw and the dbt snapshot and incremental fact, load reference data and orders up to day 0",
     )
     action.add_argument("--days", type=positive_int, metavar="N", help="advance the simulation by N days")
     args = parser.parse_args()

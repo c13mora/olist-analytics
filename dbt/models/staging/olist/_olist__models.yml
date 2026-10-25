@@ -38,6 +38,15 @@ models:
         description: "{{ doc('olist__order_estimated_delivery_date') }}"
       - name: _loaded_at
         description: "{{ doc('olist__loaded_at') }}"
+      - name: status_updated_at
+        description: >
+          The latest milestone that has happened so far (purchase, approval,
+          carrier pickup or delivery). In the replay a status only changes
+          when a milestone passes, so this is the business time of the
+          order's latest change. `snap_orders` uses it to date each version.
+          Unlike `_loaded_at`, it does not move when the same day is reloaded.
+        data_tests:
+          - not_null
 
   - name: stg_olist__customers
     description: Customer details, one row per `customer_id` (which is one per order).
