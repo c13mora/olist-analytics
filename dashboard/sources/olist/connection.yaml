@@ -1,0 +1,6 @@
+# The project's DuckDB file, written by the replay loader and dbt. The path
+# is relative to this folder.
+name: olist
+type: duckdb
+options:
+  filename: ../../../data/olist.duckdb
