@@ -30,3 +30,66 @@ jobs:
 
       - name: Lint SQL with SQLFluff
         run: uv run sqlfluff lint dbt/models --dialect duckdb
+
+  build:
+    # Runs the real pipeline on replayed data: load, build and test every
+    # model, load one more day and build again so the incremental model and
+    # the snapshot run on changed data, then check source freshness.
+    name: Build and test on replayed data
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      # The CSVs are never committed (data/ is gitignored). They are
+      # downloaded from Kaggle once and cached; the dataset never changes,
+      # so later runs skip Kaggle entirely.
+      - name: Restore Olist CSVs from cache
+        id: olist-csvs
+        uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: olist-csvs-v1
+
+      - name: Download Olist CSVs from Kaggle
+        if: steps.olist-csvs.outputs.cache-hit != 'true'
+        env:
+          # Repository secret; Kaggle CLI 2.2+ reads the token from this variable.
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+        run: uvx --from "kaggle>=2.2" kaggle datasets download olistbr/brazilian-ecommerce -p data/raw --unzip
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Install dbt packages
+        run: cd dbt && uv run dbt deps
+
+      - name: Load three months of replayed data
+        run: |
+          uv run python ingestion/replay.py --reset
+          uv run python ingestion/replay.py --days 90
+
+      # -s olist: our models only, not dbt_project_evaluator's (Phase 7).
+      - name: Build and test all models, take the first snapshot
+        run: cd dbt && uv run dbt build -s olist
+
+      - name: Load one more day
+        run: uv run python ingestion/replay.py --days 1
+
+      - name: Build again (incremental run, new snapshot versions) and test
+        run: cd dbt && uv run dbt build -s olist
+
+      # Right after a load this always passes; here it catches a loader that
+      # silently delivered nothing. In a scheduled pipeline it would also
+      # catch data that stopped arriving.
+      - name: Check source freshness
+        run: cd dbt && uv run dbt source freshness
