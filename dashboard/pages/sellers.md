@@ -188,7 +188,22 @@ order by 1
 </Dropdown>
 
 ```sql seller_table
-with shipping_by_seller as (
+with reviews_by_seller as (
+    -- A review is about an order, so every seller in the order gets it.
+    select
+        seller_orders.seller_id,
+        avg(reviews.review_score) as average_review_score
+    from (
+        select distinct seller_id, order_id
+        from olist.fct_order_items
+        where purchase_date between '2017-01-01' and '2018-08-31'
+    ) as seller_orders
+    inner join olist.fct_reviews as reviews
+        on seller_orders.order_id = reviews.order_id
+    group by seller_orders.seller_id
+),
+
+shipping_by_seller as (
     select
         seller_id,
         avg(case when is_late_to_carrier then 1.0 else 0 end) as late_to_carrier_rate,
@@ -205,12 +220,15 @@ select
     totals.revenue,
     totals.orders,
     shipping_by_seller.late_to_carrier_rate,
-    shipping_by_seller.on_time_delivery_rate
+    shipping_by_seller.on_time_delivery_rate,
+    reviews_by_seller.average_review_score
 from ${seller_totals} as totals
 inner join olist.dim_sellers as sellers
     on totals.seller_id = sellers.seller_id
 left join shipping_by_seller
     on totals.seller_id = shipping_by_seller.seller_id
+left join reviews_by_seller
+    on totals.seller_id = reviews_by_seller.seller_id
 where sellers.seller_state like '${inputs.state.value}'
 order by totals.revenue desc
 ```
@@ -223,6 +241,7 @@ order by totals.revenue desc
     <Column id=orders title="Orders" fmt=num0 />
     <Column id=late_to_carrier_rate title="Late to carrier" fmt=pct1 />
     <Column id=on_time_delivery_rate title="Customer on time" fmt=pct1 />
+    <Column id=average_review_score title="Avg. review" fmt=num2 />
 </DataTable>
 
 ## Definitions
@@ -233,8 +252,9 @@ order by totals.revenue desc
 | Revenue | Sum of item prices, excluding freight. |
 | Late to the carrier | Items whose order reached the carrier after the item's shipping deadline, of items that reached the carrier. |
 | Customer on-time delivery | Delivered on or before the promised date, of delivered items. |
+| Avg. review | Mean review score (1 to 5) of the seller's orders. |
 
-Carrier pickup and delivery are recorded once per order. In the 1% of orders
-with several sellers, every seller in the order gets the order's dates.
-Orders with out-of-order source timestamps are left out of the shipping
-figures. Review scores are not shown yet: reviews have no mart.
+Carrier pickup, delivery and reviews are recorded once per order. In the 1%
+of orders with several sellers, every seller in the order gets the order's
+dates and reviews. Orders with out-of-order source timestamps are left out
+of the shipping figures.
