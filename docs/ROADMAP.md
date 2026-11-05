@@ -77,8 +77,8 @@ olist-analytics/
 
 ## Phase 5 — Evidence dashboard (2 weeks)
 - [x] Pages: executive overview, seller performance, delivery SLAs, customer cohorts
-- [ ] Build the site in CI; deploy to GitHub Pages together with dbt docs
-- [ ] Live links added to README
+- [x] Build the site in CI; deploy to GitHub Pages together with dbt docs
+- [x] Live links added to README
 
 ## Phase 6 — Snowflake run (start the trial only here, ~1–2 weeks)
 - [ ] Roles, warehouse (XS, auto-suspend), database and schemas
