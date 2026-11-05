@@ -36,7 +36,7 @@ settings (Settings → API), then either save it as the only content of
 variable:
 
 ```bash
-uvx --from "kaggle>=2.2" kaggle datasets download olistbr/brazilian-ecommerce -p data/raw/ --unzip
+uvx --from "kaggle==2.2.5" --with six kaggle datasets download olistbr/brazilian-ecommerce -p data/raw/ --unzip
 ```
 
 > `data/` is gitignored — the CSVs are never committed.
