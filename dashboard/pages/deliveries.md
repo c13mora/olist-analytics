@@ -7,17 +7,19 @@ How fast orders reach customers, how often Olist keeps its promised delivery
 date, and what late deliveries do to reviews. Orders placed from January 2017
 to August 2018. Definitions are at the bottom of the page.
 
-```sql deliveries
--- Orders placed in the period. Durations leave out the orders whose source
--- timestamps are out of order (has_timestamp_anomaly).
-select
-    *,
-    date_diff('day', purchase_date, estimated_delivery_date) as promised_days
-from olist.fct_deliveries
-where purchase_date between '2017-01-01' and '2018-08-31'
-```
-
 ```sql kpis
+with
+
+deliveries as (
+    -- Orders placed in the period. Durations leave out the orders whose source
+    -- timestamps are out of order (has_timestamp_anomaly).
+    select
+        *,
+        date_diff('day', purchase_date, estimated_delivery_date) as promised_days
+    from olist.fct_deliveries
+    where purchase_date between '2017-01-01' and '2018-08-31'
+)
+
 select
     avg(case when delivery_status = 'on_time' then 1.0 else 0 end)
         filter (where delivery_status <> 'not_delivered') as on_time_rate,
@@ -26,7 +28,7 @@ select
     -median(days_late_vs_estimate) filter (where not has_timestamp_anomaly) as median_days_early,
     median(days_to_carrier) filter (where not has_timestamp_anomaly) as median_days_to_carrier,
     median(days_in_transit) filter (where not has_timestamp_anomaly) as median_days_in_transit
-from ${deliveries}
+from deliveries
 ```
 
 <BigValue data={kpis} value=on_time_rate title="On-time delivery" fmt=pct1 />
@@ -43,13 +45,25 @@ it up, seven with the carrier.
 ## Over time
 
 ```sql monthly
+with
+
+deliveries as (
+    -- Orders placed in the period. Durations leave out the orders whose source
+    -- timestamps are out of order (has_timestamp_anomaly).
+    select
+        *,
+        date_diff('day', purchase_date, estimated_delivery_date) as promised_days
+    from olist.fct_deliveries
+    where purchase_date between '2017-01-01' and '2018-08-31'
+)
+
 select
     date_trunc('month', purchase_date) as month,
     avg(case when delivery_status = 'on_time' then 1.0 else 0 end)
         filter (where delivery_status <> 'not_delivered') as on_time_rate,
     median(days_to_deliver) filter (where not has_timestamp_anomaly) as median_days_to_deliver,
     median(promised_days) as median_promised_days
-from ${deliveries}
+from deliveries
 group by 1
 order by 1
 ```
@@ -78,6 +92,18 @@ month. The last months look faster partly because the export ends in October
 ## By region
 
 ```sql by_state
+with
+
+deliveries as (
+    -- Orders placed in the period. Durations leave out the orders whose source
+    -- timestamps are out of order (has_timestamp_anomaly).
+    select
+        *,
+        date_diff('day', purchase_date, estimated_delivery_date) as promised_days
+    from olist.fct_deliveries
+    where purchase_date between '2017-01-01' and '2018-08-31'
+)
+
 select
     customer_state as state,
     count(*) filter (where delivery_status <> 'not_delivered') as delivered_orders,
@@ -85,7 +111,7 @@ select
     median(promised_days) as median_promised_days,
     avg(case when delivery_status = 'on_time' then 1.0 else 0 end)
         filter (where delivery_status <> 'not_delivered') as on_time_rate
-from ${deliveries}
+from deliveries
 group by 1
 order by on_time_rate
 ```
@@ -107,6 +133,18 @@ gets its orders in a median of 7 days.
 ## Late deliveries cost reviews
 
 ```sql reviews_by_lateness
+with
+
+deliveries as (
+    -- Orders placed in the period. Durations leave out the orders whose source
+    -- timestamps are out of order (has_timestamp_anomaly).
+    select
+        *,
+        date_diff('day', purchase_date, estimated_delivery_date) as promised_days
+    from olist.fct_deliveries
+    where purchase_date between '2017-01-01' and '2018-08-31'
+)
+
 select
     case
         when deliveries.days_late_vs_estimate <= -8 then '1. 8+ days early'
@@ -118,7 +156,7 @@ select
     end as delivery_timing,
     count(*) as reviews,
     avg(reviews.review_score) as average_review_score
-from ${deliveries} as deliveries
+from deliveries as deliveries
 inner join olist.fct_reviews as reviews
     on deliveries.order_id = reviews.order_id
 where

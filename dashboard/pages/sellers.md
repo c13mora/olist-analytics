@@ -17,26 +17,28 @@ where purchase_date between '2017-01-01' and '2018-08-31'
 group by seller_id
 ```
 
-```sql shipping
--- One row per item that reached the carrier. Orders with out-of-order
--- source timestamps are left out (see has_timestamp_anomaly).
-select
-    items.seller_id,
-    items.order_id,
-    date_trunc('month', items.purchase_date) as month,
-    deliveries.shipped_at > items.shipping_limit_at as is_late_to_carrier,
-    deliveries.delivery_status
-from olist.fct_order_items as items
-inner join olist.fct_deliveries as deliveries
-    on items.order_id = deliveries.order_id
-where
-    items.purchase_date between '2017-01-01' and '2018-08-31'
-    and deliveries.shipped_at is not null
-    and not deliveries.has_timestamp_anomaly
-```
-
 ```sql kpis
-with ranked as (
+with
+
+shipping as (
+    -- One row per item that reached the carrier. Orders with out-of-order
+    -- source timestamps are left out (see has_timestamp_anomaly).
+    select
+        items.seller_id,
+        items.order_id,
+        date_trunc('month', items.purchase_date) as month,
+        deliveries.shipped_at > items.shipping_limit_at as is_late_to_carrier,
+        deliveries.delivery_status
+    from olist.fct_order_items as items
+    inner join olist.fct_deliveries as deliveries
+        on items.order_id = deliveries.order_id
+    where
+        items.purchase_date between '2017-01-01' and '2018-08-31'
+        and deliveries.shipped_at is not null
+        and not deliveries.has_timestamp_anomaly
+),
+
+ ranked as (
     select
         revenue,
         row_number() over (order by revenue desc) as revenue_rank,
@@ -50,7 +52,7 @@ select
     (select median(orders) from ${seller_totals}) as median_orders,
     sum(revenue) filter (where revenue_rank <= seller_count * 0.1) / max(total_revenue)
         as top_10_pct_share,
-    (select avg(case when is_late_to_carrier then 1.0 else 0 end) from ${shipping}) as late_to_carrier_rate
+    (select avg(case when is_late_to_carrier then 1.0 else 0 end) from shipping) as late_to_carrier_rate
 from ranked
 ```
 
@@ -133,10 +135,30 @@ Sellers commit to a deadline for handing each item to the carrier. Missing
 it is the part of delivery a seller controls.
 
 ```sql late_by_month
+with
+
+shipping as (
+    -- One row per item that reached the carrier. Orders with out-of-order
+    -- source timestamps are left out (see has_timestamp_anomaly).
+    select
+        items.seller_id,
+        items.order_id,
+        date_trunc('month', items.purchase_date) as month,
+        deliveries.shipped_at > items.shipping_limit_at as is_late_to_carrier,
+        deliveries.delivery_status
+    from olist.fct_order_items as items
+    inner join olist.fct_deliveries as deliveries
+        on items.order_id = deliveries.order_id
+    where
+        items.purchase_date between '2017-01-01' and '2018-08-31'
+        and deliveries.shipped_at is not null
+        and not deliveries.has_timestamp_anomaly
+)
+
 select
     month,
     avg(case when is_late_to_carrier then 1.0 else 0 end) as late_to_carrier_rate
-from ${shipping}
+from shipping
 group by month
 order by month
 ```
@@ -154,11 +176,31 @@ and February 2018, against about 7% in calmer months. It was highest while
 the marketplace was ramping up in early 2017 (22% in January).
 
 ```sql impact
+with
+
+shipping as (
+    -- One row per item that reached the carrier. Orders with out-of-order
+    -- source timestamps are left out (see has_timestamp_anomaly).
+    select
+        items.seller_id,
+        items.order_id,
+        date_trunc('month', items.purchase_date) as month,
+        deliveries.shipped_at > items.shipping_limit_at as is_late_to_carrier,
+        deliveries.delivery_status
+    from olist.fct_order_items as items
+    inner join olist.fct_deliveries as deliveries
+        on items.order_id = deliveries.order_id
+    where
+        items.purchase_date between '2017-01-01' and '2018-08-31'
+        and deliveries.shipped_at is not null
+        and not deliveries.has_timestamp_anomaly
+)
+
 select
     case when is_late_to_carrier then 'Seller late to carrier' else 'Seller on time' end
         as seller_shipping,
     avg(case when delivery_status = 'on_time' then 1.0 else 0 end) as on_time_delivery_rate
-from ${shipping}
+from shipping
 where delivery_status <> 'not_delivered'
 group by 1
 order by 1 desc
@@ -188,7 +230,27 @@ order by 1
 </Dropdown>
 
 ```sql seller_table
-with reviews_by_seller as (
+with
+
+shipping as (
+    -- One row per item that reached the carrier. Orders with out-of-order
+    -- source timestamps are left out (see has_timestamp_anomaly).
+    select
+        items.seller_id,
+        items.order_id,
+        date_trunc('month', items.purchase_date) as month,
+        deliveries.shipped_at > items.shipping_limit_at as is_late_to_carrier,
+        deliveries.delivery_status
+    from olist.fct_order_items as items
+    inner join olist.fct_deliveries as deliveries
+        on items.order_id = deliveries.order_id
+    where
+        items.purchase_date between '2017-01-01' and '2018-08-31'
+        and deliveries.shipped_at is not null
+        and not deliveries.has_timestamp_anomaly
+),
+
+ reviews_by_seller as (
     -- A review is about an order, so every seller in the order gets it.
     select
         seller_orders.seller_id,
@@ -209,7 +271,7 @@ shipping_by_seller as (
         avg(case when is_late_to_carrier then 1.0 else 0 end) as late_to_carrier_rate,
         avg(case when delivery_status = 'on_time' then 1.0 else 0 end)
             filter (where delivery_status <> 'not_delivered') as on_time_delivery_rate
-    from ${shipping}
+    from shipping
     group by seller_id
 )
 
