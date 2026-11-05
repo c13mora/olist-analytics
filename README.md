@@ -2,6 +2,17 @@
 
 End-to-end analytics engineering project on the Olist e-commerce dataset: daily replay ingestion (dlt), dbt models with tests and snapshots, DuckDB/Snowflake, and an Evidence dashboard.
 
+## Live site
+
+- **Dashboard:** [c13mora.github.io/olist-analytics](https://c13mora.github.io/olist-analytics/):
+  executive overview, seller performance, delivery SLAs and customer cohorts.
+- **dbt docs:** [c13mora.github.io/olist-analytics/dbt-docs](https://c13mora.github.io/olist-analytics/dbt-docs/):
+  every model, column and test, with the lineage graph.
+
+Both are rebuilt from the full replayed dataset and published on every push to
+`main` ([`deploy.yml`](.github/workflows/deploy.yml)), only after every dbt
+test and every dashboard query passes.
+
 ## Quick start
 
 ### 1. Clone and install
