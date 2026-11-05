@@ -15,13 +15,26 @@ the full dataset, so replay to the end of the data.
 cd dashboard
 npm install
 npm run sources   # read the marts from data/olist.duckdb
-npm run dev       # local preview at http://localhost:3000
+npm run dev       # local preview at http://localhost:3000/olist-analytics
 ```
+
+Then check every page's queries the way the browser runs them (the build
+alone does not fail on broken SQL):
+
+```bash
+cd ..
+uv run python scripts/check_dashboard_queries.py
+```
+
+The site is published to GitHub Pages by `.github/workflows/deploy.yml`,
+together with the dbt docs, under the `/olist-analytics` base path set in
+`evidence.config.yaml`.
 
 ## How it is organised
 
 - `sources/olist/`: one query per mart table, read from `../data/olist.duckdb`.
-  The dashboard reads marts only, never staging or raw.
+  The dashboard reads marts only, never staging or raw, and only the columns
+  the pages use: visitors can download the site's data.
 - `pages/`: one Markdown page per topic, with SQL and chart components.
 
 ## Notes

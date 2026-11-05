@@ -1,2 +1,7 @@
--- fct_payments from the dbt marts. The dashboard reads marts only, never staging or raw.
-select * from main_marts.fct_payments
+-- From the dbt marts: only the columns the pages use, since the published
+-- site lets any visitor download its data. The dashboard reads marts only.
+select
+    purchase_date,
+    payment_type,
+    payment_value
+from main_marts.fct_payments

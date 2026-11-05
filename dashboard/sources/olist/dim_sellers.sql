@@ -1,2 +1,7 @@
--- dim_sellers from the dbt marts. The dashboard reads marts only, never staging or raw.
-select * from main_marts.dim_sellers
+-- From the dbt marts: only the columns the pages use, since the published
+-- site lets any visitor download its data. The dashboard reads marts only.
+select
+    seller_id,
+    seller_state,
+    seller_city
+from main_marts.dim_sellers

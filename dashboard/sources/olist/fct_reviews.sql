@@ -1,2 +1,6 @@
--- fct_reviews from the dbt marts. The dashboard reads marts only, never staging or raw.
-select * from main_marts.fct_reviews
+-- From the dbt marts: only the columns the pages use, since the published
+-- site lets any visitor download its data. The dashboard reads marts only.
+select
+    order_id,
+    review_score
+from main_marts.fct_reviews

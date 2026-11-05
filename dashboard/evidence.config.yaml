@@ -1,3 +1,9 @@
+# The site is published on GitHub Pages under the repository's name
+# (https://c13mora.github.io/olist-analytics/), not at the domain root.
+# Evidence prefixes site-relative links (e.g. "/sellers") with this path.
+deployment:
+  basePath: /olist-analytics
+
 appearance:
   default: system
   switcher: true
