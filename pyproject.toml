@@ -7,7 +7,7 @@ dependencies = [
     "dbt-core",
     "dbt-duckdb",
     "dbt-snowflake",
-    "dlt[duckdb]",
+    "dlt[duckdb,snowflake]",
     "sqlfluff",
     "sqlfluff-templater-dbt",
     "pre-commit",

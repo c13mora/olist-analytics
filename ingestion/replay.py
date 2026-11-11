@@ -1,17 +1,22 @@
 """Replay the static Olist CSVs as if they were a live source system.
 
 The raw schema always reflects the source system as of the end of the
-simulated date stored in state.json.
+simulated date stored in the destination's state file.
 
 Usage:
     uv run python ingestion/replay.py --reset    # wipe raw (and the snapshot and incremental fact), load reference data and orders up to day 0
     uv run python ingestion/replay.py --days N   # advance the simulation by N days
+
+Both load into the local DuckDB file by default. Add `--destination snowflake`
+to load the same raw tables into Snowflake (see snowflake/setup.sql and the
+README); each destination keeps its own simulated date.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections.abc import Iterator
 from datetime import date, datetime, time, timedelta
@@ -24,8 +29,8 @@ import duckdb
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = REPO_ROOT / "data" / "raw"
 DUCKDB_PATH = REPO_ROOT / "data" / "olist.duckdb"
-STATE_PATH = Path(__file__).resolve().parent / "state.json"
 
+DESTINATIONS = ("duckdb", "snowflake")
 PIPELINE_NAME = "olist_replay"
 DATASET_NAME = "raw"
 
@@ -235,17 +240,47 @@ def end_of(day: date) -> datetime:
     return datetime.combine(day + timedelta(days=1), time.min)
 
 
-def make_pipeline() -> dlt.Pipeline:
-    return dlt.pipeline(
-        pipeline_name=PIPELINE_NAME,
-        destination=dlt.destinations.duckdb(str(DUCKDB_PATH)),
-        dataset_name=DATASET_NAME,
-    )
+def state_path(destination: str = "duckdb") -> Path:
+    """Each destination keeps its own simulated date."""
+    suffix = "" if destination == "duckdb" else f"_{destination}"
+    return Path(__file__).resolve().parent / f"state{suffix}.json"
 
 
-def run_pipeline(resources: list[Any], table_names: list[str]) -> dict[str, int]:
+def snowflake_credentials() -> dict[str, str]:
+    """Key-pair credentials from the same environment variables dbt uses.
+
+    dlt signs in with the LOADER role, which can only create and write the
+    raw schemas (see snowflake/setup.sql).
+    """
+    required = ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_PRIVATE_KEY_PATH"]
+    missing = [name for name in required if not os.environ.get(name)]
+    if missing:
+        sys.exit(f"Set {', '.join(missing)} to load into Snowflake. See the README section on Snowflake.")
+    return {
+        "host": os.environ["SNOWFLAKE_ACCOUNT"],
+        "username": os.environ.get("SNOWFLAKE_USER", "OLIST_SERVICE"),
+        "private_key_path": os.environ["SNOWFLAKE_PRIVATE_KEY_PATH"],
+        "database": os.environ.get("SNOWFLAKE_DATABASE", "OLIST"),
+        "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "OLIST_WH"),
+        "role": os.environ.get("SNOWFLAKE_LOADER_ROLE", "LOADER"),
+    }
+
+
+def make_pipeline(destination: str = "duckdb") -> dlt.Pipeline:
+    if destination == "snowflake":
+        # dlt writes Snowflake identifiers in upper case (ORDER_ID), which is
+        # what dbt's unquoted lower-case names resolve to.
+        target = dlt.destinations.snowflake(credentials=snowflake_credentials())
+        pipeline_name = f"{PIPELINE_NAME}_snowflake"
+    else:
+        target = dlt.destinations.duckdb(str(DUCKDB_PATH))
+        pipeline_name = PIPELINE_NAME
+    return dlt.pipeline(pipeline_name=pipeline_name, destination=target, dataset_name=DATASET_NAME)
+
+
+def run_pipeline(resources: list[Any], table_names: list[str], destination: str = "duckdb") -> dict[str, int]:
     """Load the resources and return the number of rows loaded per table."""
-    pipeline = make_pipeline()
+    pipeline = make_pipeline(destination)
     load_info = pipeline.run(resources)
     load_info.raise_on_failed_jobs()
 
@@ -256,52 +291,73 @@ def run_pipeline(resources: list[Any], table_names: list[str]) -> dict[str, int]
     return row_counts
 
 
-def read_state() -> date:
-    if not STATE_PATH.exists():
-        sys.exit("No simulation state found. Run `replay.py --reset` first.")
-    return date.fromisoformat(json.loads(STATE_PATH.read_text())["simulated_date"])
+def read_state(destination: str = "duckdb") -> date:
+    path = state_path(destination)
+    if not path.exists():
+        sys.exit(f"No simulation state found for {destination}. Run `replay.py --reset` first.")
+    return date.fromisoformat(json.loads(path.read_text())["simulated_date"])
 
 
-def write_state(simulated_date: date) -> None:
-    STATE_PATH.write_text(json.dumps({"simulated_date": simulated_date.isoformat()}, indent=2) + "\n")
+def write_state(simulated_date: date, destination: str = "duckdb") -> None:
+    state_path(destination).write_text(json.dumps({"simulated_date": simulated_date.isoformat()}, indent=2) + "\n")
 
 
-def reset() -> None:
+def drop_raw(destination: str) -> None:
+    """Drop the raw data and dlt's own record of it, in the destination and locally.
+
+    dlt keeps pipeline state both in the destination and in a local working
+    folder. Drop both, otherwise dlt would assume the old tables still exist.
+    """
+    if destination == "snowflake":
+        # RAW_STAGING is where dlt stages merges. dbt's tables belong to the
+        # TRANSFORMER role, which LOADER cannot drop (see the note in reset).
+        with make_pipeline(destination).sql_client() as client:
+            client.execute_sql(f"drop schema if exists {DATASET_NAME} cascade")
+            client.execute_sql(f"drop schema if exists {DATASET_NAME}_staging cascade")
+    else:
+        with duckdb.connect(str(DUCKDB_PATH)) as con:
+            con.execute(f"drop schema if exists {DATASET_NAME} cascade")
+            for table in DBT_ACCUMULATING_TABLES:
+                con.execute(f"drop table if exists {table}")
+    make_pipeline(destination).drop()
+
+
+def reset(destination: str = "duckdb") -> None:
     """Wipe raw and dbt's accumulating tables, reload reference data and backfill orders up to day 0."""
     missing = [f for f in SOURCE_FILES.values() if not (RAW_DIR / f).exists()]
     if missing:
         sys.exit(f"Missing CSVs in {RAW_DIR}: {', '.join(missing)}. See README step 2.")
 
-    # dlt keeps pipeline state both in the destination and in a local working
-    # folder. Drop both, otherwise dlt would assume the old tables still exist.
-    with duckdb.connect(str(DUCKDB_PATH)) as con:
-        con.execute(f"drop schema if exists {DATASET_NAME} cascade")
-        for table in DBT_ACCUMULATING_TABLES:
-            con.execute(f"drop table if exists {table}")
-    make_pipeline().drop()
+    drop_raw(destination)
 
     con = source_connection()
     resources = [table_resource(con, table_name, f"select * from {table_name}") for table_name in REFERENCE_TABLES]
     resources += transactional_resources(con, datetime.min, end_of(START_DATE))
 
-    print(f"Resetting simulation to {START_DATE.isoformat()}")
-    run_pipeline(resources, REFERENCE_TABLES + list(TRANSACTIONAL_QUERIES))
-    write_state(START_DATE)
+    print(f"Resetting simulation to {START_DATE.isoformat()} ({destination})")
+    run_pipeline(resources, REFERENCE_TABLES + list(TRANSACTIONAL_QUERIES), destination)
+    write_state(START_DATE, destination)
+    if destination == "snowflake":
+        print(
+            "Note: on Snowflake, the dbt snapshot and incremental fact belong to the TRANSFORMER role and\n"
+            "were not dropped. If they exist from an earlier run, drop the DBT_DEV_SNAPSHOTS schema and\n"
+            "run dbt with --full-refresh, so no history from the previous simulation survives."
+        )
 
 
-def advance(days: int) -> dict[str, int]:
+def advance(days: int, destination: str = "duckdb") -> dict[str, int]:
     """Load everything that happened in the source system over the next N days."""
-    current_date = read_state()
+    current_date = read_state(destination)
     new_date = current_date + timedelta(days=days)
 
     con = source_connection()
     resources = transactional_resources(con, end_of(current_date), end_of(new_date))
 
-    print(f"Advancing simulation {current_date.isoformat()} -> {new_date.isoformat()}")
-    row_counts = run_pipeline(resources, list(TRANSACTIONAL_QUERIES))
+    print(f"Advancing simulation {current_date.isoformat()} -> {new_date.isoformat()} ({destination})")
+    row_counts = run_pipeline(resources, list(TRANSACTIONAL_QUERIES), destination)
     # State is saved only after a successful load. If the load fails, the next
     # run replays the same window, which the merge keys make safe.
-    write_state(new_date)
+    write_state(new_date, destination)
     return row_counts
 
 
@@ -321,12 +377,18 @@ def main() -> None:
         help="wipe raw and the dbt snapshot and incremental fact, load reference data and orders up to day 0",
     )
     action.add_argument("--days", type=positive_int, metavar="N", help="advance the simulation by N days")
+    parser.add_argument(
+        "--destination",
+        choices=DESTINATIONS,
+        default="duckdb",
+        help="where to load the raw tables (default: the local DuckDB file)",
+    )
     args = parser.parse_args()
 
     if args.reset:
-        reset()
+        reset(args.destination)
     else:
-        advance(args.days)
+        advance(args.days, args.destination)
 
 
 if __name__ == "__main__":

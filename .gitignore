@@ -229,4 +229,4 @@ node_modules/
 dbt/.user.yml
 
 # Replay runtime state (recreated by `replay.py --reset`)
-ingestion/state.json
+ingestion/state*.json
