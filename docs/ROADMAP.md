@@ -81,9 +81,9 @@ olist-analytics/
 - [x] Live links added to README
 
 ## Phase 6 — Snowflake run (start the trial only here, ~1–2 weeks)
-- [ ] Roles, warehouse (XS, auto-suspend), database and schemas
-- [ ] `snowflake` target via env vars; full `dbt build` passes
-- [ ] Fix any dialect differences via cross-database macros
+- [x] Roles, warehouse (XS, auto-suspend), database and schemas
+- [x] `snowflake` target via env vars; full `dbt build` passes
+- [x] Fix any dialect differences via cross-database macros
 - [ ] Screenshots: query history, cost/credits used, build output → `docs/snowflake/`
 - [ ] README section "Running on Snowflake"
 
