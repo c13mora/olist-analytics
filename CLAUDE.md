@@ -36,7 +36,8 @@ matter more than cleverness.
 ```
 ingestion/        replay loader (dlt) and simulation state
 dbt/              dbt project (models, snapshots, macros, seeds, tests)
-scripts/          demo driving the replay and dbt (scripts/demo.py)
+scripts/          demo driving the replay and dbt, dashboard query checker
+snowflake/        one-time Snowflake setup (roles, warehouse, service user)
 dashboard/        Evidence project
 data/raw/         Olist CSVs (gitignored, never commit)
 docs/             ROADMAP.md and decision records (docs/decisions/)
