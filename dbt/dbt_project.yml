@@ -32,3 +32,17 @@ models:
       logistics:
         +materialized: table
         +schema: marts
+
+seeds:
+  # The project's own exceptions (seeds/dbt_project_evaluator_exceptions.csv)
+  # replace the package's empty default seed of the same name.
+  dbt_project_evaluator:
+    dbt_project_evaluator_exceptions:
+      +enabled: false
+
+data_tests:
+  # dbt_project_evaluator's checks warn by default; CI sets
+  # DBT_PROJECT_EVALUATOR_SEVERITY=error so a change that breaks one of its
+  # rules fails the pull request. Exceptions: seeds/dbt_project_evaluator_exceptions.csv.
+  dbt_project_evaluator:
+    +severity: "{{ env_var('DBT_PROJECT_EVALUATOR_SEVERITY', 'warn') }}"

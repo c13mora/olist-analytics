@@ -96,3 +96,11 @@ jobs:
       # catch data that stopped arriving.
       - name: Check source freshness
         run: cd dbt && uv run dbt source freshness
+
+      # dbt Labs' best-practice rules (naming, documentation, test coverage,
+      # structure), as errors rather than the package's default warnings.
+      # Deliberate exceptions live in dbt/seeds/dbt_project_evaluator_exceptions.csv.
+      - name: Check dbt best practices (dbt-project-evaluator)
+        env:
+          DBT_PROJECT_EVALUATOR_SEVERITY: error
+        run: cd dbt && uv run dbt build --select package:dbt_project_evaluator dbt_project_evaluator_exceptions
