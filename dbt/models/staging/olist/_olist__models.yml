@@ -240,15 +240,23 @@ models:
 
   - name: stg_olist__geolocation
     description: >
-      Latitude and longitude points per zip code prefix, cast to float. Not
-      unique per prefix and still contains the source's duplicate rows.
+      Latitude and longitude points per zip code prefix, cast to double. Not
+      unique per prefix and still contains the source's duplicate rows, so it
+      has no primary key; int_geolocation__grouped_by_zip makes one row per
+      prefix and tests that.
     columns:
       - name: geolocation_zip_code_prefix
         description: "{{ doc('olist__zip_code_prefix') }}"
+        data_tests:
+          - not_null
       - name: geolocation_lat
         description: "{{ doc('olist__geolocation_lat') }}"
+        data_tests:
+          - not_null
       - name: geolocation_lng
         description: "{{ doc('olist__geolocation_lng') }}"
+        data_tests:
+          - not_null
       - name: geolocation_city
         description: "{{ doc('olist__city') }}"
       - name: geolocation_state
