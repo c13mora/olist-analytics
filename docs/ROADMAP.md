@@ -84,8 +84,8 @@ olist-analytics/
 - [x] Roles, warehouse (XS, auto-suspend), database and schemas
 - [x] `snowflake` target via env vars; full `dbt build` passes
 - [x] Fix any dialect differences via cross-database macros
-- [ ] Screenshots: query history, cost/credits used, build output → `docs/snowflake/`
-- [ ] README section "Running on Snowflake"
+- [x] Screenshots: query history, cost/credits used, build output → `docs/snowflake/`
+- [x] README section "Running on Snowflake"
 
 ## Phase 7 — Polish (1 week)
 - [ ] dbt-project-evaluator passes (or exceptions documented)

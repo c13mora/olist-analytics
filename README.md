@@ -107,6 +107,72 @@ Replays seven days one at a time and shows, per day, what the incremental
 model processed and what the snapshot recorded, then one order's status
 history. See [docs/demo.md](docs/demo.md) for a walkthrough of the output.
 
+## Running on Snowflake
+
+The same loader and dbt project also run on Snowflake, the secondary target.
+On the full dataset, every mart matches the DuckDB build exactly. The run is
+documented in [docs/snowflake/](docs/snowflake/), and the reasoning in
+[decision record 007](docs/decisions/007-snowflake.md).
+
+### 1. Set up the account (once)
+
+1. **Create a key pair** for the service user (Git Bash includes `openssl`). The
+   private key stays on your computer; never commit or share it.
+   ```bash
+   mkdir -p ~/.snowflake
+   openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out ~/.snowflake/olist_rsa_key.p8 -nocrypt
+   openssl rsa -in ~/.snowflake/olist_rsa_key.p8 -pubout -out ~/.snowflake/olist_rsa_key.pub
+   ```
+2. **Run [`snowflake/setup.sql`](snowflake/setup.sql)** as `ACCOUNTADMIN` in a
+   Snowsight worksheet, with `<PUBLIC_KEY>` replaced by the public key on one
+   line (`grep -v "PUBLIC KEY" ~/.snowflake/olist_rsa_key.pub | tr -d '\n'`).
+   It creates:
+   - a `LOADER` role (writes the raw schemas) and a `TRANSFORMER` role (reads
+     raw, builds the dbt schemas);
+   - an extra-small warehouse, `OLIST_WH`, that suspends after 60 idle
+     seconds, capped at 10 credits a month by a resource monitor;
+   - the `OLIST` database;
+   - an `OLIST_SERVICE` user that signs in with the key, never a password.
+3. **Set two environment variables,** then restart your terminal or editor.
+   Credentials never go in the repo.
+   ```powershell
+   [Environment]::SetEnvironmentVariable("SNOWFLAKE_ACCOUNT", "<ORGNAME-ACCOUNTNAME>", "User")
+   [Environment]::SetEnvironmentVariable("SNOWFLAKE_PRIVATE_KEY_PATH", "$HOME\.snowflake\olist_rsa_key.p8", "User")
+   ```
+   Find the identifier with
+   `select current_organization_name() || '-' || current_account_name();`.
+
+### 2. Load and build
+
+From the repo root:
+
+```bash
+uv run python ingestion/replay.py --reset --destination snowflake     # raw tables, as LOADER
+uv run python ingestion/replay.py --days 90 --destination snowflake   # advance the simulation
+cd dbt
+uv run dbt debug --target snowflake      # check the connection
+uv run dbt build --target snowflake      # every model and test, as TRANSFORMER
+uv run dbt source freshness --target snowflake
+```
+
+The Snowflake replay keeps its own simulated date (`ingestion/state_snowflake.json`),
+separate from the local DuckDB one. On Snowflake, `--reset` does not drop the
+dbt snapshot and incremental fact, which belong to the `TRANSFORMER` role; drop
+the `DBT_DEV_SNAPSHOTS` schema and run dbt with `--full-refresh` after a reset.
+
+### 3. Clean up
+
+To remove everything when you are done, run as `ACCOUNTADMIN`:
+
+```sql
+drop database if exists olist;
+drop warehouse if exists olist_wh;
+drop user if exists olist_service;
+drop role if exists loader;
+drop role if exists transformer;
+drop resource monitor if exists olist_monitor;
+```
+
 ## Architecture
 
 ```
