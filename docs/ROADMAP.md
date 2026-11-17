@@ -88,7 +88,7 @@ olist-analytics/
 - [x] README section "Running on Snowflake"
 
 ## Phase 7 — Polish (1 week)
-- [ ] dbt-project-evaluator passes (or exceptions documented)
-- [ ] README: problem, architecture diagram, lineage screenshot, key findings, how to run, next steps
-- [ ] Link from the earlier Streamlit Olist project ("v1 → v2" story)
-- [ ] Pin repo on GitHub profile
+- [x] dbt-project-evaluator passes (or exceptions documented)
+- [x] README: problem, architecture diagram, lineage screenshot, key findings, how to run, next steps
+- [x] Link from the earlier Streamlit Olist project ("v1 → v2" story)
+- [x] Pin repo on GitHub profile

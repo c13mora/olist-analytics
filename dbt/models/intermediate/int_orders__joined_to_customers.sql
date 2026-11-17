@@ -1,7 +1,9 @@
 -- Orders with the person who placed them and the location the order went to.
 -- Every fact needs customer_unique_id (the person), and Olist only links it to
 -- orders through the per-order customer_id, so the join lives here once.
--- Ephemeral (the project default): a 1:1 join whose grain the facts test.
+-- A view rather than the ephemeral default: dbt cannot test ephemeral models,
+-- and every primary key here gets unique + not_null.
+{{ config(materialized='view') }}
 
 with
 
