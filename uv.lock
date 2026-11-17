@@ -727,6 +727,9 @@ wheels = [
 duckdb = [
     { name = "duckdb" },
 ]
+snowflake = [
+    { name = "snowflake-connector-python" },
+]
 
 [[package]]
 name = "duckdb"
@@ -1278,7 +1281,7 @@ dependencies = [
     { name = "dbt-core" },
     { name = "dbt-duckdb" },
     { name = "dbt-snowflake" },
-    { name = "dlt", extra = ["duckdb"] },
+    { name = "dlt", extra = ["duckdb", "snowflake"] },
     { name = "pre-commit" },
     { name = "sqlfluff" },
     { name = "sqlfluff-templater-dbt" },
@@ -1289,7 +1292,7 @@ requires-dist = [
     { name = "dbt-core" },
     { name = "dbt-duckdb" },
     { name = "dbt-snowflake" },
-    { name = "dlt", extras = ["duckdb"] },
+    { name = "dlt", extras = ["duckdb", "snowflake"] },
     { name = "pre-commit" },
     { name = "sqlfluff" },
     { name = "sqlfluff-templater-dbt" },
